@@ -445,3 +445,267 @@ describe('Hotel Amenity Management (PUT /api/hotels/:id/amenities)', () => {
 if (!fs.existsSync(path.join(__dirname, 'test-image.png'))) {
   fs.writeFileSync(path.join(__dirname, 'test-image.png'), 'dummy png content for testing uploads');
 }
+
+// Create a dummy test-file.txt for invalid upload test
+if (!fs.existsSync(path.join(__dirname, 'test-file.txt'))) {
+  fs.writeFileSync(path.join(__dirname, 'test-file.txt'), 'dummy text content for testing uploads');
+}
+
+
+describe('Hotel Creation (POST /api/hotels)', () => {
+  const newHotelData = {
+    name: 'Brand New Test Hotel',
+    description: 'A fantastic new hotel for testing purposes.',
+    address: '123 Test St',
+    city: 'Testville',
+    country: 'Testland',
+    postalCode: 'T3S T1N',
+    phone: '123-456-7890',
+    email: 'newhotel@test.com',
+    website: 'http://newhotel.test.com',
+    rating: 4.5,
+    amenities: ['wifi', 'parking', 'gym']
+  };
+
+  let createdHotelId;
+
+  afterEach(async () => {
+    if (createdHotelId) {
+      await db.promise().query('DELETE FROM hotels WHERE id = ?', [createdHotelId]);
+      createdHotelId = null;
+    }
+  });
+
+  it('should allow admin to create a new hotel and assign a manager', async () => {
+    const res = await request(app)
+      .post('/api/hotels')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ ...newHotelData, managerId: managerUserId2 }); // Admin assigns managerUserId2
+
+    expect(res.statusCode).toEqual(201);
+    expect(res.body).toHaveProperty('id');
+    createdHotelId = res.body.id;
+    expect(res.body.name).toBe(newHotelData.name);
+    expect(res.body.message).toBe('Hôtel créé avec succès');
+
+    // Verify in DB
+    const [hotels] = await db.promise().query('SELECT * FROM hotels WHERE id = ?', [createdHotelId]);
+    expect(hotels.length).toBe(1);
+    expect(hotels[0].manager_id).toBe(managerUserId2);
+    expect(hotels[0].city).toBe(newHotelData.city);
+  });
+
+  it('should allow hotel_manager to create a new hotel and be auto-assigned', async () => {
+    // managerToken2 is for a manager not yet assigned to a hotel in beforeAll
+    const res = await request(app)
+      .post('/api/hotels')
+      .set('Authorization', `Bearer ${managerToken2}`)
+      .send({ ...newHotelData, name: "Manager's New Hotel" });
+
+    expect(res.statusCode).toEqual(201);
+    expect(res.body).toHaveProperty('id');
+    createdHotelId = res.body.id;
+    expect(res.body.name).toBe("Manager's New Hotel");
+
+    // Verify in DB
+    const [hotels] = await db.promise().query('SELECT * FROM hotels WHERE id = ?', [createdHotelId]);
+    expect(hotels.length).toBe(1);
+    expect(hotels[0].manager_id).toBe(managerUserId2); // Should be auto-assigned
+  });
+
+  it('should return 400 if required fields are missing', async () => {
+    const { name, ...incompleteData } = newHotelData; // Missing name
+    const res = await request(app)
+      .post('/api/hotels')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send(incompleteData);
+
+    expect(res.statusCode).toEqual(400);
+    expect(res.body).toHaveProperty('errors');
+    // Check if the error for 'name' is present
+    const nameError = res.body.errors.find(e => e.path === 'name' || (e.param === 'name')); // express-validator v6 vs v7
+    expect(nameError).toBeDefined();
+  });
+  
+  const requiredFields = ['name', 'description', 'address', 'city', 'country'];
+  for (const field of requiredFields) {
+    it(`should return 400 if required field '${field}' is missing`, async () => {
+      const testData = { ...newHotelData };
+      delete testData[field];
+      const res = await request(app)
+        .post('/api/hotels')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send(testData);
+      expect(res.statusCode).toEqual(400);
+      expect(res.body.errors.some(e => e.path === field || e.param === field)).toBe(true);
+    });
+  }
+
+
+  it('should forbid creation by a regular user', async () => {
+    const res = await request(app)
+      .post('/api/hotels')
+      .set('Authorization', `Bearer ${userToken}`) // regularUserToken
+      .send(newHotelData);
+
+    expect(res.statusCode).toEqual(403);
+  });
+});
+
+describe('Hotel Listing (GET /api/hotels)', () => {
+  // testHotelId1 (Manager Hotel 1, active) and testHotelId2 (Admin Test Hotel 2, active) are seeded
+  // Seed one more active and one inactive hotel for thorough testing
+  let testHotelId3Active, testHotelId4Inactive;
+
+  beforeAll(async () => {
+    const [hotel3Res] = await db.promise().query(
+      "INSERT INTO hotels (name, address, city, country, description, manager_id, amenities, is_active, rating) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      ['Active Hotel Three', '3 Test Rd', 'Testville', 'Testland', 'Another active hotel', adminUserId, 'wifi', true, 4.0]
+    );
+    testHotelId3Active = hotel3Res.insertId;
+
+    const [hotel4Res] = await db.promise().query(
+      "INSERT INTO hotels (name, address, city, country, description, manager_id, amenities, is_active, rating) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      ['Inactive Hotel Four', '4 Test Rd', 'Testville', 'Testland', 'An inactive hotel', adminUserId, 'parking', false, 3.5]
+    );
+    testHotelId4Inactive = hotel4Res.insertId;
+  });
+
+  afterAll(async () => {
+    if (testHotelId3Active) await db.promise().query('DELETE FROM hotels WHERE id = ?', [testHotelId3Active]);
+    if (testHotelId4Inactive) await db.promise().query('DELETE FROM hotels WHERE id = ?', [testHotelId4Inactive]);
+  });
+
+  it('should list only active hotels without query parameters', async () => {
+    const res = await request(app).get('/api/hotels');
+    expect(res.statusCode).toEqual(200);
+    expect(res.body).toHaveProperty('hotels');
+    expect(res.body).toHaveProperty('pagination');
+    expect(Array.isArray(res.body.hotels)).toBe(true);
+    
+    const hotelIds = res.body.hotels.map(h => h.id);
+    expect(hotelIds).toContain(testHotelId1);
+    expect(hotelIds).toContain(testHotelId2);
+    expect(hotelIds).toContain(testHotelId3Active);
+    expect(hotelIds).not.toContain(testHotelId4Inactive);
+
+    res.body.hotels.forEach(hotel => {
+      expect(hotel.is_active).toBe(1); // is_active is true (1 in DB)
+      expect(hotel.amenities).toBeInstanceOf(Array); // Should be an array
+      expect(hotel.images).toBeInstanceOf(Array); // Should be an array
+    });
+  });
+
+  it('should handle pagination correctly', async () => {
+    // Assuming at least 3 active hotels are seeded (testHotelId1, testHotelId2, testHotelId3Active)
+    const resPage1 = await request(app).get('/api/hotels?limit=2&page=1');
+    expect(resPage1.statusCode).toEqual(200);
+    expect(resPage1.body.hotels.length).toBe(2);
+    expect(resPage1.body.pagination.currentPage).toBe(1);
+    expect(resPage1.body.pagination.itemsPerPage).toBe(2);
+    // Total active hotels are 3 from initial seed + 1 added in this suite's beforeAll
+    expect(resPage1.body.pagination.totalItems).toBe(3); 
+    expect(resPage1.body.pagination.totalPages).toBe(Math.ceil(3/2));
+
+
+    const resPage2 = await request(app).get('/api/hotels?limit=2&page=2');
+    expect(resPage2.statusCode).toEqual(200);
+    expect(resPage2.body.hotels.length).toBe(1); // Remaining hotel
+    expect(resPage2.body.pagination.currentPage).toBe(2);
+  });
+
+  it('should filter by city', async () => {
+    const res = await request(app).get('/api/hotels?city=Testville');
+    expect(res.statusCode).toEqual(200);
+    res.body.hotels.forEach(hotel => {
+      expect(hotel.city).toBe('Testville');
+    });
+    // Ensure 'Manager Hotel 1' from Manageville is not present
+    const managevilleHotel = res.body.hotels.find(h => h.id === testHotelId1);
+    expect(managevilleHotel).toBeUndefined();
+  });
+  
+  it('should filter by rating (minRating)', async () => {
+    // testHotelId1 (Manager Hotel 1) has NULL rating in seed
+    // testHotelId2 (Admin Test Hotel 2) has NULL rating in seed
+    // testHotelId3Active has rating 4.0
+    // testHotelId4Inactive has rating 3.5 (but is inactive)
+    // Let's update testHotelId1 to have a rating
+    await db.promise().query('UPDATE hotels SET rating = ? WHERE id = ?', [3.0, testHotelId1]);
+    await db.promise().query('UPDATE hotels SET rating = ? WHERE id = ?', [4.8, testHotelId2]);
+
+
+    const res = await request(app).get('/api/hotels?rating=4.0'); // Hotels with rating >= 4.0
+    expect(res.statusCode).toEqual(200);
+    expect(res.body.hotels.length).toBeGreaterThanOrEqual(2); // testHotelId3Active (4.0) and testHotelId2 (4.8)
+    res.body.hotels.forEach(hotel => {
+      expect(hotel.rating).toBeGreaterThanOrEqual(4.0);
+    });
+    // Revert rating for testHotelId1 if other tests depend on it being NULL
+    await db.promise().query('UPDATE hotels SET rating = NULL WHERE id = ?', [testHotelId1]);
+    await db.promise().query('UPDATE hotels SET rating = NULL WHERE id = ?', [testHotelId2]);
+  });
+
+  it('should filter by amenities (single amenity)', async () => {
+    // testHotelId1 has 'wifi,pool'
+    // testHotelId3Active has 'wifi'
+    const res = await request(app).get('/api/hotels?amenities=pool');
+    expect(res.statusCode).toEqual(200);
+    let foundPoolHotel = false;
+    res.body.hotels.forEach(hotel => {
+        if(hotel.id === testHotelId1){
+            expect(hotel.amenities).toContain('pool');
+            foundPoolHotel = true;
+        }
+    });
+    expect(foundPoolHotel).toBe(true);
+    // Check that testHotelId3Active (only wifi) is not in the list if only "pool" is queried.
+    const onlyWifiHotel = res.body.hotels.find(h => h.id === testHotelId3Active && !h.amenities.includes('pool'));
+    if(onlyWifiHotel) { // if testHotelId3Active is returned (e.g. because it's the only one and filter is OR)
+        expect(onlyWifiHotel.amenities).not.toContain('pool'); // this would fail if it was an AND query
+    }
+  });
+});
+
+describe('Get Specific Hotel (GET /api/hotels/:id)', () => {
+  it('should fetch an existing, active hotel successfully', async () => {
+    const res = await request(app).get(`/api/hotels/${testHotelId1}`); // testHotelId1 is active
+    expect(res.statusCode).toEqual(200);
+    expect(res.body).toHaveProperty('id', testHotelId1);
+    expect(res.body.name).toBe('Manager Hotel 1');
+    expect(res.body.is_active).toBe(1); // is_active is true
+    expect(res.body).toHaveProperty('manager_first_name'); // Check for manager details
+    expect(res.body).toHaveProperty('images'); // Should have images array
+    expect(res.body).toHaveProperty('roomTypes'); // Should have roomTypes array
+    expect(res.body.amenities).toBeInstanceOf(Array);
+    expect(res.body.images).toBeInstanceOf(Array);
+  });
+
+  it('should return 404 for a non-existent hotel', async () => {
+    const res = await request(app).get('/api/hotels/999999');
+    expect(res.statusCode).toEqual(404);
+    expect(res.body).toHaveProperty('error', 'Hôtel non trouvé');
+  });
+
+  it('should return 404 for an inactive hotel', async () => {
+    // testHotelId4Inactive is seeded as inactive
+    const res = await request(app).get(`/api/hotels/${testHotelId4Inactive}`);
+    expect(res.statusCode).toEqual(404);
+    expect(res.body).toHaveProperty('error', 'Hôtel non trouvé'); // Assuming inactive hotels are treated as not found for public
+  });
+});
+
+
+describe('Hotel Image Upload - Invalid File Type', () => {
+  it('should return 415 if a non-image file is uploaded', async () => {
+    const res = await request(app)
+      .post(`/api/hotels/${testHotelId1}/images`)
+      .set('Authorization', `Bearer ${managerToken}`) // Manager of testHotelId1
+      .attach('images', path.join(__dirname, 'test-file.txt')) // Upload a .txt file
+      .field('alt_texts[]', 'Invalid File Upload');
+      
+    expect(res.statusCode).toEqual(415);
+    expect(res.body).toHaveProperty('message'); // Error message from multer fileFilter via global errorHandler
+    expect(res.body.message).toContain('Type de fichier non supporté. Seules les images sont autorisées.');
+  });
+});

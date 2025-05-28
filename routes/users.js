@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const { body, validationResult, query } = require('express-validator');
 const db = require('../config/database');
 const { authenticateToken, requireRole } = require('../middleware/auth');
+const { ROLES } = require('../utils/constants'); // Added ROLES
 const logger = require('../utils/logger');
 
 const router = express.Router();
@@ -103,10 +104,10 @@ router.put('/change-password', authenticateToken, [
 });
 
 // Lister tous les utilisateurs (admin seulement)
-router.get('/', authenticateToken, requireRole(['admin']), [
+router.get('/', authenticateToken, requireRole([ROLES.ADMIN]), [
   query('page').optional().isInt({ min: 1 }),
   query('limit').optional().isInt({ min: 1, max: 100 }),
-  query('role').optional().isIn(['client', 'hotel_manager', 'admin']),
+  query('role').optional().isIn(Object.values(ROLES)), // Used Object.values(ROLES)
   query('search').optional().trim()
 ], async (req, res) => {
   try {
@@ -160,7 +161,7 @@ router.get('/', authenticateToken, requireRole(['admin']), [
 });
 
 // Obtenir un utilisateur spécifique (admin seulement)
-router.get('/:id', authenticateToken, requireRole(['admin']), async (req, res) => {
+router.get('/:id', authenticateToken, requireRole([ROLES.ADMIN]), async (req, res) => {
   try {
     const [users] = await db.execute(
       `SELECT id, email, first_name, last_name, phone, user_type, company_name, 
@@ -182,7 +183,7 @@ router.get('/:id', authenticateToken, requireRole(['admin']), async (req, res) =
 });
 
 // Activer/Désactiver un utilisateur (admin seulement)
-router.patch('/:id/status', authenticateToken, requireRole(['admin']), [
+router.patch('/:id/status', authenticateToken, requireRole([ROLES.ADMIN]), [
   body('isActive').isBoolean()
 ], async (req, res) => {
   try {
@@ -202,8 +203,8 @@ router.patch('/:id/status', authenticateToken, requireRole(['admin']), [
 });
 
 // Changer le rôle d'un utilisateur (admin seulement)
-router.patch('/:id/role', authenticateToken, requireRole(['admin']), [
-  body('role').isIn(['client', 'hotel_manager', 'admin'])
+router.patch('/:id/role', authenticateToken, requireRole([ROLES.ADMIN]), [
+  body('role').isIn(Object.values(ROLES)) // Used Object.values(ROLES)
 ], async (req, res) => {
   try {
     const { role } = req.body;
@@ -222,7 +223,7 @@ router.patch('/:id/role', authenticateToken, requireRole(['admin']), [
 });
 
 // Supprimer un utilisateur (admin seulement)
-router.delete('/:id', authenticateToken, requireRole(['admin']), async (req, res) => {
+router.delete('/:id', authenticateToken, requireRole([ROLES.ADMIN]), async (req, res) => {
   const connection = await db.getConnection();
   
   try {

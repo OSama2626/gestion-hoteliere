@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../config/database');
 const { authenticateToken, requireRole } = require('../middleware/auth');
+const { ROLES } = require('../utils/constants'); // Added ROLES
 const logger = require('../utils/logger');
 const { param, query, validationResult } = require('express-validator');
 
@@ -37,7 +38,7 @@ router.get('/',
     const countParams = [];
     let whereClauses = [];
 
-    if (currentUserRole !== 'admin') {
+    if (currentUserRole !== ROLES.ADMIN) { // Used ROLES.ADMIN
       whereClauses.push('i.user_id = ?');
       params.push(currentUserId);
       countParams.push(currentUserId);
@@ -90,7 +91,7 @@ router.get('/',
 router.put('/:invoiceId/status',
   [
     authenticateToken,
-    requireRole(['admin', 'hotel_manager']),
+    requireRole([ROLES.ADMIN, ROLES.HOTEL_MANAGER]), // Used ROLES.ADMIN, ROLES.HOTEL_MANAGER
     param('invoiceId').isInt().withMessage('Invoice ID must be an integer.'),
     body('status').notEmpty().isIn(['pending', 'paid', 'overdue', 'cancelled']).withMessage('Invalid or missing status. Must be one of: pending, paid, overdue, cancelled.')
   ],
@@ -172,7 +173,7 @@ router.get('/:invoiceId',
       const invoice = invoices[0];
 
       // If user is not admin, check if the invoice belongs to them
-      if (currentUserRole !== 'admin' && invoice.user_id !== currentUserId) {
+      if (currentUserRole !== ROLES.ADMIN && invoice.user_id !== currentUserId) { // Used ROLES.ADMIN
         return res.status(403).json({ message: 'Forbidden: You do not have access to this invoice.' });
       }
 
