@@ -1,0 +1,146 @@
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+@import 'bootstrap/dist/css/bootstrap.min.css';
+
+/* Custom Variables */
+:root {
+  --primary: #2563eb;
+  --secondary: #3b82f6;
+  --accent: #60a5fa;
+  --dark: #1e293b;
+  --light: #f8fafc;
+}
+
+/* Modern Animations */
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-20px); }
+  100% { transform: translateY(0px); }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Modern Navbar */
+.modern-navbar {
+  @apply fixed w-full bg-white/90 backdrop-blur-sm shadow-lg z-50;
+}
+
+.navbar-content {
+  @apply container mx-auto px-4 py-3 flex justify-between items-center;
+}
+
+.brand {
+  @apply text-2xl font-bold text-blue-600 flex items-center gap-2 hover:text-blue-700 transition-colors;
+}
+
+.nav-menu {
+  @apply flex items-center gap-6;
+}
+
+.nav-link {
+  @apply px-4 py-2 text-gray-700 hover:text-blue-600 transition-all hover:bg-blue-50 rounded-lg font-medium;
+}
+
+.nav-link.active {
+  @apply text-blue-600 bg-blue-50;
+}
+
+.auth-buttons {
+  @apply flex items-center gap-4;
+}
+
+/* Hero Section */
+.modern-hero {
+  @apply min-h-screen pt-20 bg-gradient-to-br from-blue-50 to-white;
+}
+
+.hero-container {
+  @apply container mx-auto px-4 py-16 grid lg:grid-cols-2 gap-12 items-center;
+}
+
+.hero-content {
+  @apply space-y-8 animate-fadeIn;
+}
+
+.hero-title {
+  @apply text-5xl font-bold text-gray-900 leading-tight;
+}
+
+.hero-subtitle {
+  @apply text-xl text-gray-600 leading-relaxed;
+}
+
+.hero-buttons {
+  @apply flex flex-wrap gap-4;
+}
+
+.btn-modern {
+  @apply px-6 py-3 rounded-lg font-semibold transition-all duration-300 transform hover:-translate-y-1;
+}
+
+.btn-primary {
+  @apply bg-blue-600 text-white hover:bg-blue-700 shadow-lg hover:shadow-xl;
+}
+
+.btn-outline {
+  @apply border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white;
+}
+
+.hero-image {
+  @apply relative animate-float;
+}
+
+.hero-image img {
+  @apply rounded-2xl shadow-2xl w-full h-auto object-cover;
+}
+
+/* Features Section */
+.features {
+  @apply py-20 bg-white;
+}
+
+.feature-card {
+  @apply p-6 rounded-xl bg-white shadow-lg hover:shadow-xl transition-shadow;
+}
+
+/* Animations Classes */
+.animate-fadeIn {
+  animation: fadeInUp 1s ease-out;
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .hero-container {
+    @apply grid-cols-1 text-center;
+  }
+  
+  .hero-buttons {
+    @apply justify-center;
+  }
+  
+  .nav-menu {
+    @apply fixed top-16 left-0 w-full bg-white/90 backdrop-blur-sm p-4 flex-col items-start gap-2 shadow-lg transform transition-transform duration-300;
+  }
+  
+  .nav-menu.hidden {
+    @apply -translate-y-full;
+  }
+  
+  .nav-link {
+    @apply w-full text-center;
+  }
+} 

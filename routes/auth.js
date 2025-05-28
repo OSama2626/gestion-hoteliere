@@ -8,6 +8,7 @@ const { body, validationResult } = require('express-validator');
 const db = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
 const { sendEmail } = require('../utils/email');
+
 const logger = require('../utils/logger');
 
 const router = express.Router();
