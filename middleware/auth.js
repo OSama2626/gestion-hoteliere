@@ -1,6 +1,7 @@
 // middleware/auth.js - Middleware d'authentification
 const jwt = require('jsonwebtoken');
 const db = require('../config/database');
+const { ROLES } = require('../utils/constants');
 
 const authenticateToken = async (req, res, next) => {
   const authHeader = req.headers['authorization'];
