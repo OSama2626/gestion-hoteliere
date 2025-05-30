@@ -6,6 +6,7 @@ const fs = require('fs'); // Added fs for file operations
 const { body, validationResult, query, param } = require('express-validator'); // Added param
 const db = require('../config/database');
 const { authenticateToken, requireRole } = require('../middleware/auth');
+const { ROLES } = require('../utils/constants'); // Added ROLES
 const logger = require('../utils/logger');
 
 const router = express.Router();
@@ -28,7 +29,9 @@ const upload = multer({
     if (file.mimetype.startsWith('image/')) {
       cb(null, true);
     } else {
-      cb(new Error('Seules les images sont autorisées'));
+      const error = new Error('Type de fichier non supporté. Seules les images sont autorisées.');
+      error.statusCode = 415; // Unsupported Media Type
+      cb(error);
     }
   }
 });
@@ -179,7 +182,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // Créer un nouvel hôtel (admin/manager)
-router.post('/', authenticateToken, requireRole(['admin', 'hotel_manager']), [
+router.post('/', authenticateToken, requireRole([ROLES.ADMIN, ROLES.HOTEL_MANAGER]), [
   body('name').trim().isLength({ min: 2 }),
   body('description').trim().isLength({ min: 10 }),
   body('address').trim().isLength({ min: 5 }),
@@ -206,7 +209,7 @@ router.post('/', authenticateToken, requireRole(['admin', 'hotel_manager']), [
       phone, email, website, rating, amenities
     } = req.body;
 
-    const managerId = req.user.role === 'admin' ? req.body.managerId || req.user.id : req.user.id;
+    const managerId = req.user.role === ROLES.ADMIN ? req.body.managerId || req.user.id : req.user.id;
 
     const [result] = await connection.execute(
       // ... (assuming the rest of the POST route implementation here)
@@ -233,7 +236,7 @@ router.post('/', authenticateToken, requireRole(['admin', 'hotel_manager']), [
 router.put('/:id', 
   [
     authenticateToken,
-    requireRole(['admin', 'hotel_manager']),
+    requireRole([ROLES.ADMIN, ROLES.HOTEL_MANAGER]),
     param('id').isInt().withMessage('Hotel ID must be an integer.'),
     body('name').optional().trim().isLength({ min: 2 }).withMessage('Name must be at least 2 characters.'),
     body('description').optional().trim().isLength({ min: 10 }).withMessage('Description must be at least 10 characters.'),
@@ -270,13 +273,13 @@ router.put('/:id',
       const hotel = hotels[0];
 
       // Authorization check: Admin or assigned Hotel Manager
-      if (userRole === 'hotel_manager' && hotel.manager_id !== userId) {
+      if (userRole === ROLES.HOTEL_MANAGER && hotel.manager_id !== userId) {
         await connection.rollback();
         return res.status(403).json({ message: 'Forbidden: You are not authorized to update this hotel.' });
       }
 
       // Manager_id update restriction
-      if (req.body.manager_id && req.body.manager_id !== hotel.manager_id && userRole !== 'admin') {
+      if (req.body.manager_id && req.body.manager_id !== hotel.manager_id && userRole !== ROLES.ADMIN) {
         await connection.rollback();
         return res.status(403).json({ message: 'Forbidden: Only admins can change the manager ID.' });
       }
@@ -289,7 +292,7 @@ router.put('/:id',
         if (allowedFields.includes(key) && req.body[key] !== undefined) {
           if (key === 'amenities' && Array.isArray(req.body[key])) {
             updateFields[key] = req.body[key].join(',');
-          } else if (key === 'manager_id' && userRole === 'admin') { // Ensure only admin can set manager_id
+          } else if (key === 'manager_id' && userRole === ROLES.ADMIN) { // Ensure only admin can set manager_id
             updateFields[key] = req.body[key];
           } else if (key !== 'manager_id') { // Other fields
              updateFields[key] = req.body[key];
@@ -298,7 +301,7 @@ router.put('/:id',
       }
       
       // Ensure manager_id is only processed if user is admin
-      if (req.body.manager_id !== undefined && userRole !== 'admin') {
+      if (req.body.manager_id !== undefined && userRole !== ROLES.ADMIN) {
         delete updateFields.manager_id; // remove if non-admin tried to set it
       }
 
@@ -348,7 +351,7 @@ router.put('/:id',
 router.put('/:id/amenities',
   [
     authenticateToken,
-    requireRole(['admin', 'hotel_manager']),
+    requireRole([ROLES.ADMIN, ROLES.HOTEL_MANAGER]),
     param('id').isInt().withMessage('Hotel ID must be an integer.'),
     body('amenities').isArray().withMessage('Amenities must be an array.'),
     body('amenities.*').isString().trim().notEmpty().withMessage('Each amenity must be a non-empty string.')
@@ -376,7 +379,7 @@ router.put('/:id/amenities',
       const hotel = hotels[0];
 
       // 2. Authorization check
-      if (userRole === 'hotel_manager' && hotel.manager_id !== userId && managerHotelId !== hotelId) {
+      if (userRole === ROLES.HOTEL_MANAGER && hotel.manager_id !== userId && managerHotelId !== hotelId) {
         await connection.rollback();
         return res.status(403).json({ message: 'Forbidden: You are not authorized to update amenities for this hotel.' });
       }
@@ -430,7 +433,7 @@ router.put('/:id/amenities',
 router.put('/:id/images/:imageId',
   [
     authenticateToken,
-    requireRole(['admin', 'hotel_manager']),
+    requireRole([ROLES.ADMIN, ROLES.HOTEL_MANAGER]),
     param('id').isInt().withMessage('Hotel ID must be an integer.'),
     param('imageId').isInt().withMessage('Image ID must be an integer.'),
     body('alt_text').optional().isString().trim().withMessage('Alt text must be a string.'),
@@ -464,7 +467,7 @@ router.put('/:id/images/:imageId',
       const hotel = hotels[0];
 
       // Authorization for hotel manager
-      if (userRole === 'hotel_manager' && hotel.manager_id !== userId && managerHotelId !== hotelId) {
+      if (userRole === ROLES.HOTEL_MANAGER && hotel.manager_id !== userId && managerHotelId !== hotelId) {
         await connection.rollback();
         return res.status(403).json({ message: 'Forbidden: You are not authorized to update images for this hotel.' });
       }
@@ -534,7 +537,7 @@ router.put('/:id/images/:imageId',
 router.delete('/:id/images/:imageId',
   [
     authenticateToken,
-    requireRole(['admin', 'hotel_manager']),
+    requireRole([ROLES.ADMIN, ROLES.HOTEL_MANAGER]),
     param('id').isInt().withMessage('Hotel ID must be an integer.'),
     param('imageId').isInt().withMessage('Image ID must be an integer.')
   ],
@@ -561,7 +564,7 @@ router.delete('/:id/images/:imageId',
       const hotel = hotels[0];
 
       // Authorization for hotel manager
-      if (userRole === 'hotel_manager' && hotel.manager_id !== userId && managerHotelId !== hotelId) {
+      if (userRole === ROLES.HOTEL_MANAGER && hotel.manager_id !== userId && managerHotelId !== hotelId) {
         await connection.rollback();
         return res.status(403).json({ message: 'Forbidden: You are not authorized to delete images for this hotel.' });
       }
@@ -657,7 +660,7 @@ router.get('/:id/images',
 router.post('/:id/images',
   [
     authenticateToken,
-    requireRole(['admin', 'hotel_manager']),
+    requireRole([ROLES.ADMIN, ROLES.HOTEL_MANAGER]),
     param('id').isInt().withMessage('Hotel ID must be an integer.')
   ],
   async (req, res, next) => { // Custom middleware to check hotel existence and authorization before multer processes files
@@ -671,7 +674,7 @@ router.post('/:id/images',
       }
       const hotel = hotels[0];
 
-      if (userRole === 'hotel_manager' && hotel.manager_id !== userId && managerHotelId !== hotelId) {
+      if (userRole === ROLES.HOTEL_MANAGER && hotel.manager_id !== userId && managerHotelId !== hotelId) {
          // Check if manager_id from hotel table matches the authenticated user's ID,
         // OR if the hotel_id in the user's token (if they are a manager for a specific hotel) matches the hotelId from param.
         return res.status(403).json({ message: 'Forbidden: You are not authorized to upload images for this hotel.' });
@@ -747,7 +750,7 @@ router.post('/:id/images',
 router.delete('/:id',
   [
     authenticateToken,
-    requireRole(['admin']),
+    requireRole([ROLES.ADMIN]),
     param('id').isInt().withMessage('Hotel ID must be an integer.')
   ],
   async (req, res) => {

@@ -2,13 +2,14 @@ const express = require('express');
 const router = express.Router();
 const db = require('../config/database');
 const { authenticateToken, requireRole } = require('../middleware/auth');
+const { ROLES } = require('../utils/constants'); // Added ROLES
 const logger = require('../utils/logger');
 
 // GET /admin-summary (Admin Dashboard Summary)
 router.get('/admin-summary',
   [
     authenticateToken,
-    requireRole(['admin', 'hotel_manager'])
+    requireRole([ROLES.ADMIN, ROLES.HOTEL_MANAGER]) // Used ROLES
   ],
   async (req, res) => {
     try {
@@ -87,7 +88,7 @@ router.get('/admin-summary',
 router.get('/hotel-summary/:hotelId',
   [
     authenticateToken,
-    requireRole(['admin', 'hotel_manager']), // Admin can also access this for any hotel
+    requireRole([ROLES.ADMIN, ROLES.HOTEL_MANAGER]), // Admin can also access this for any hotel // Used ROLES
     (req, res, next) => { // Custom middleware to check hotelId for manager
       const { role, hotel_id: managerHotelId } = req.user;
       const requestedHotelId = parseInt(req.params.hotelId, 10);
@@ -96,7 +97,7 @@ router.get('/hotel-summary/:hotelId',
         return res.status(400).json({ message: 'Hotel ID must be an integer.'});
       }
 
-      if (role === 'hotel_manager' && managerHotelId !== requestedHotelId) {
+      if (role === ROLES.HOTEL_MANAGER && managerHotelId !== requestedHotelId) { // Used ROLES.HOTEL_MANAGER
         return res.status(403).json({ message: 'Forbidden: You do not have access to this hotel\'s summary.' });
       }
       // If admin, or if managerHotelId matches requestedHotelId, proceed

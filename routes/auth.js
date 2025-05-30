@@ -8,6 +8,7 @@ const { body, validationResult } = require('express-validator');
 const db = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
 const { sendEmail } = require('../utils/email');
+const { ROLES } = require('../utils/constants'); // Added ROLES
 
 const logger = require('../utils/logger');
 
@@ -41,8 +42,8 @@ router.post('/register', [
 
     const [result] = await db.execute(
       `INSERT INTO users (email, password_hash, first_name, last_name, phone, user_type, company_name, role)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 'client')`,
-      [email, hashedPassword, firstName, lastName, phone, userType || 'individual', companyName]
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, // Changed 'client' to ?
+      [email, hashedPassword, firstName, lastName, phone, userType || 'individual', companyName, ROLES.CLIENT] // Added ROLES.CLIENT
     );
 
     await sendEmail(email, 'Bienvenue !', 'Votre compte a été créé avec succès.');

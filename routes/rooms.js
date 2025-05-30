@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../config/database');
 const { authenticateToken, requireRole } = require('../middleware/auth');
+const { ROLES } = require('../utils/constants'); // Added ROLES
 const logger = require('../utils/logger');
 const { body, param, query, validationResult } = require('express-validator');
 
@@ -9,7 +10,7 @@ const { body, param, query, validationResult } = require('express-validator');
 router.post('/',
   [
     authenticateToken,
-    requireRole(['admin', 'hotel_manager']),
+    requireRole([ROLES.ADMIN, ROLES.HOTEL_MANAGER]),
     body('hotel_id').isInt().withMessage('Hotel ID must be an integer.'),
     body('room_type_id').isInt().withMessage('Room Type ID must be an integer.'),
     body('room_number').notEmpty().withMessage('Room number is required.').trim(),
@@ -76,7 +77,7 @@ router.post('/',
 router.delete('/rates/:rateId',
   [
     authenticateToken,
-    requireRole(['admin', 'hotel_manager']),
+    requireRole([ROLES.ADMIN, ROLES.HOTEL_MANAGER]),
     param('rateId').isInt().withMessage('Rate ID must be an integer.')
   ],
   async (req, res) => {
@@ -138,7 +139,7 @@ router.get('/rates/hotel/:hotelId/type/:roomTypeId',
 router.post('/rates',
   [
     authenticateToken,
-    requireRole(['admin', 'hotel_manager']),
+    requireRole([ROLES.ADMIN, ROLES.HOTEL_MANAGER]),
     body('hotel_id').isInt().withMessage('Hotel ID must be an integer.'),
     body('room_type_id').isInt().withMessage('Room Type ID must be an integer.'),
     body('base_price').isNumeric().withMessage('Base price must be a numeric value.'),
@@ -210,7 +211,7 @@ router.post('/rates',
 router.delete('/:roomId',
   [
     authenticateToken,
-    requireRole(['admin', 'hotel_manager']),
+    requireRole([ROLES.ADMIN, ROLES.HOTEL_MANAGER]),
     param('roomId').isInt().withMessage('Room ID must be an integer.')
   ],
   async (req, res) => {
@@ -255,7 +256,7 @@ router.delete('/:roomId',
 router.put('/:roomId',
   [
     authenticateToken,
-    requireRole(['admin', 'hotel_manager']),
+    requireRole([ROLES.ADMIN, ROLES.HOTEL_MANAGER]),
     param('roomId').isInt().withMessage('Room ID must be an integer.'),
     body('room_number').optional().notEmpty().withMessage('Room number cannot be empty.').trim(),
     body('room_type_id').optional().isInt().withMessage('Room Type ID must be an integer.'),
@@ -433,7 +434,7 @@ router.get('/hotel/:hotelId',
 router.post('/types',
   [
     authenticateToken,
-    requireRole(['admin', 'hotel_manager']),
+    requireRole([ROLES.ADMIN, ROLES.HOTEL_MANAGER]),
     body('hotel_id').isInt().withMessage('Hotel ID must be an integer.'),
     body('name').notEmpty().withMessage('Name is required.'),
     body('capacity').isInt({ gt: 0 }).withMessage('Capacity must be a positive integer.'),
@@ -475,7 +476,7 @@ router.post('/types',
 router.delete('/types/:typeId',
   [
     authenticateToken,
-    requireRole(['admin', 'hotel_manager'])
+    requireRole([ROLES.ADMIN, ROLES.HOTEL_MANAGER])
   ],
   async (req, res) => {
     const { typeId } = req.params;
@@ -520,7 +521,7 @@ router.delete('/types/:typeId',
 router.put('/types/:typeId',
   [
     authenticateToken,
-    requireRole(['admin', 'hotel_manager']),
+    requireRole([ROLES.ADMIN, ROLES.HOTEL_MANAGER]),
     body('name').optional().notEmpty().withMessage('Name cannot be empty.'),
     body('capacity').optional().isInt({ gt: 0 }).withMessage('Capacity must be a positive integer.'),
     body('description').optional().isString(),
