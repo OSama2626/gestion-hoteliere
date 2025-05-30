@@ -1,122 +1,159 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import AOS from 'aos';
-import 'aos/dist/aos.css';
-import '../styles/modern.css';
+import '../styles/main.css';
 
 function HomePage() {
   const location = useLocation();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-
-  useEffect(() => {
-    AOS.init({
-      duration: 1000,
-      once: true,
-    });
-  }, []);
 
   return (
-    <>
-      <nav className="modern-navbar">
-        <div className="navbar-content">
-          <div className="flex items-center gap-12">
-            <Link to="/" className="brand">
-              <i className="fas fa-hotel text-3xl"></i>
-              <span>HotelSphere</span>
+    <div>
+      {/* Navigation */}
+      <nav className="navbar">
+        <div className="navbar-container">
+          <Link to="/" className="brand">
+            <i className="fas fa-hotel"></i>
+            HotelSphere
+          </Link>
+          
+          <div className="nav-links">
+            <Link to="/" className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}>
+              Accueil
             </Link>
-            
-            {/* Navigation Links - Left Side */}
-            <div className={`nav-menu ${isMenuOpen ? 'flex' : 'hidden md:flex'}`}>
-              <Link to="/" className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}>
-                Accueil
-              </Link>
-              <Link to="/rooms" className={`nav-link ${location.pathname === '/rooms' ? 'active' : ''}`}>
-                Chambres
-              </Link>
-              <Link to="/services" className={`nav-link ${location.pathname === '/services' ? 'active' : ''}`}>
-                Services
-              </Link>
-            </div>
-          </div>
-
-          {/* Auth Buttons - Right Side */}
-          <div className="auth-buttons">
-            <Link to="/login" className="btn-modern btn-outline">
+            <Link to="/hotels" className={`nav-link ${location.pathname === '/hotels' ? 'active' : ''}`}>
+              Nos Hôtels
+            </Link>
+            <Link to="/reservations" className={`nav-link ${location.pathname === '/reservations' ? 'active' : ''}`}>
+              Réservations
+            </Link>
+            <Link to="/contact" className={`nav-link ${location.pathname === '/contact' ? 'active' : ''}`}>
+              Contact
+            </Link>
+            <Link to="/login" className="btn btn-outline">
               Connexion
             </Link>
-            <Link to="/register" className="btn-modern btn-primary">
+            <Link to="/register" className="btn btn-primary">
               S'inscrire
             </Link>
           </div>
         </div>
       </nav>
 
-      <main className="modern-hero">
+      {/* Hero Section */}
+      <section className="hero">
         <div className="hero-container">
-          <motion.div 
-            className="hero-content"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-          >
-            <h1 className="hero-title" data-aos="fade-up">
-              Gérez votre hôtel en toute simplicité
-            </h1>
-            <p className="hero-subtitle" data-aos="fade-up" data-aos-delay="200">
-              Une solution complète et moderne pour la gestion hôtelière.
-              Optimisez vos réservations, gérez votre personnel et améliorez
-              l'expérience de vos clients.
-            </p>
-            <div className="hero-buttons" data-aos="fade-up" data-aos-delay="400">
-              <Link to="/register" className="btn-modern btn-primary">
-                Commencer maintenant
-              </Link>
-              <Link to="/demo" className="btn-modern btn-outline">
-                Voir la démo
-              </Link>
-            </div>
-          </motion.div>
-
-          <motion.div 
-            className="hero-image"
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8 }}
-          >
-            <img
-              src="https://images.unsplash.com/photo-1566073771259-6a8506099945?ixlib=rb-4.0.3&auto=format&fit=crop&w=1470&q=80"
-              alt="Luxury hotel interior"
-              className="rounded-2xl shadow-2xl"
-              data-aos="zoom-in"
-            />
-          </motion.div>
+          <h1 className="hero-title animate-fadeIn">
+            Gestion Hôtelière Intelligente
+          </h1>
+          <p className="hero-subtitle animate-fadeIn">
+            Une solution complète pour la gestion de vos établissements hôteliers.
+            Simplifiez vos réservations, optimisez votre gestion et améliorez l'expérience client.
+          </p>
+          <div className="animate-fadeIn">
+            <Link to="/register" className="btn btn-primary">
+              Commencer maintenant
+            </Link>
+            <Link to="/demo" className="btn btn-outline" style={{ marginLeft: '1rem' }}>
+              Voir la démo
+            </Link>
+          </div>
         </div>
+      </section>
 
-        {/* Features Section */}
-        <section className="features">
-          <div className="container mx-auto px-4">
-            <div className="grid md:grid-cols-3 gap-8">
-              <div className="feature-card" data-aos="fade-up">
-                <i className="fas fa-calendar-check text-4xl text-blue-600 mb-4"></i>
-                <h3 className="text-xl font-bold mb-2">Gestion des Réservations</h3>
-                <p className="text-gray-600">Système de réservation intelligent et automatisé</p>
+      {/* Features Section */}
+      <section className="features">
+        <div className="container">
+          <h2 className="section-title">Solutions pour chaque utilisateur</h2>
+          <div className="features-grid">
+            {/* Client Features */}
+            <div className="feature-card">
+              <div className="feature-icon">
+                <i className="fas fa-user-circle"></i>
               </div>
-              <div className="feature-card" data-aos="fade-up" data-aos-delay="200">
-                <i className="fas fa-users text-4xl text-blue-600 mb-4"></i>
-                <h3 className="text-xl font-bold mb-2">Gestion du Personnel</h3>
-                <p className="text-gray-600">Optimisez les plannings et les tâches</p>
+              <h3 className="feature-title">Espace Client</h3>
+              <ul className="feature-list">
+                <li><i className="fas fa-check"></i>Réservation en ligne</li>
+                <li><i className="fas fa-check"></i>Gestion des séjours</li>
+                <li><i className="fas fa-check"></i>Historique des réservations</li>
+                <li><i className="fas fa-check"></i>Notifications en temps réel</li>
+              </ul>
+            </div>
+
+            {/* Reception Features */}
+            <div className="feature-card">
+              <div className="feature-icon">
+                <i className="fas fa-concierge-bell"></i>
               </div>
-              <div className="feature-card" data-aos="fade-up" data-aos-delay="400">
-                <i className="fas fa-chart-line text-4xl text-blue-600 mb-4"></i>
-                <h3 className="text-xl font-bold mb-2">Analyses et Rapports</h3>
-                <p className="text-gray-600">Suivez vos performances en temps réel</p>
+              <h3 className="feature-title">Espace Réception</h3>
+              <ul className="feature-list">
+                <li><i className="fas fa-check"></i>Gestion des check-in/out</li>
+                <li><i className="fas fa-check"></i>Suivi des disponibilités</li>
+                <li><i className="fas fa-check"></i>Facturation simplifiée</li>
+                <li><i className="fas fa-check"></i>Services additionnels</li>
+              </ul>
+            </div>
+
+            {/* Admin Features */}
+            <div className="feature-card">
+              <div className="feature-icon">
+                <i className="fas fa-chart-line"></i>
               </div>
+              <h3 className="feature-title">Espace Administration</h3>
+              <ul className="feature-list">
+                <li><i className="fas fa-check"></i>Tableau de bord</li>
+                <li><i className="fas fa-check"></i>Gestion des établissements</li>
+                <li><i className="fas fa-check"></i>Analyses statistiques</li>
+                <li><i className="fas fa-check"></i>Rapports détaillés</li>
+              </ul>
             </div>
           </div>
-        </section>
-      </main>
-    </>
+        </div>
+      </section>
+
+      {/* Stats Section */}
+      <section className="stats">
+        <div className="stats-grid">
+          <div className="stat-card">
+            <div className="stat-icon">
+              <i className="fas fa-hotel"></i>
+            </div>
+            <div className="stat-number">50+</div>
+            <div className="stat-label">Hôtels Partenaires</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-icon">
+              <i className="fas fa-users"></i>
+            </div>
+            <div className="stat-number">10,000+</div>
+            <div className="stat-label">Clients Satisfaits</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-icon">
+              <i className="fas fa-bed"></i>
+            </div>
+            <div className="stat-number">5,000+</div>
+            <div className="stat-label">Chambres Disponibles</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-icon">
+              <i className="fas fa-star"></i>
+            </div>
+            <div className="stat-number">4.8/5</div>
+            <div className="stat-label">Note Moyenne</div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="cta">
+        <div className="cta-container">
+          <h2 className="cta-title">Prêt à optimiser votre gestion hôtelière ?</h2>
+          <p className="cta-text">Rejoignez les établissements qui nous font confiance</p>
+          <Link to="/register" className="btn btn-primary">
+            Commencer gratuitement
+          </Link>
+        </div>
+      </section>
+    </div>
   );
 }
 

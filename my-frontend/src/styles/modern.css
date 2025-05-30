@@ -15,7 +15,7 @@
 /* Modern Animations */
 @keyframes float {
   0% { transform: translateY(0px); }
-  50% { transform: translateY(-20px); }
+  50% { transform: translateY(-10px); }
   100% { transform: translateY(0px); }
 }
 
@@ -32,15 +32,15 @@
 
 /* Modern Navbar */
 .modern-navbar {
-  @apply fixed w-full bg-white/90 backdrop-blur-sm shadow-lg z-50;
+  @apply fixed w-full bg-white/95 backdrop-blur-sm shadow-lg z-50;
 }
 
 .navbar-content {
-  @apply container mx-auto px-4 py-3 flex justify-between items-center;
+  @apply container mx-auto px-4 py-4 flex justify-between items-center;
 }
 
 .brand {
-  @apply text-2xl font-bold text-blue-600 flex items-center gap-2 hover:text-blue-700 transition-colors;
+  @apply text-2xl font-bold text-blue-600 flex items-center gap-2 hover:text-blue-700 transition-colors duration-300;
 }
 
 .nav-menu {
@@ -48,11 +48,24 @@
 }
 
 .nav-link {
-  @apply px-4 py-2 text-gray-700 hover:text-blue-600 transition-all hover:bg-blue-50 rounded-lg font-medium;
+  @apply px-4 py-2 text-gray-700 hover:text-blue-600 transition-all duration-300 hover:bg-blue-50 rounded-lg font-medium relative overflow-hidden;
+}
+
+.nav-link::after {
+  content: '';
+  @apply absolute bottom-0 left-0 w-0 h-0.5 bg-blue-600 transition-all duration-300;
+}
+
+.nav-link:hover::after {
+  @apply w-full;
 }
 
 .nav-link.active {
   @apply text-blue-600 bg-blue-50;
+}
+
+.nav-link.active::after {
+  @apply w-full;
 }
 
 .auth-buttons {
@@ -85,15 +98,15 @@
 }
 
 .btn-modern {
-  @apply px-6 py-3 rounded-lg font-semibold transition-all duration-300 transform hover:-translate-y-1;
+  @apply px-6 py-3 rounded-lg font-semibold transition-all duration-300 transform hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-offset-2;
 }
 
 .btn-primary {
-  @apply bg-blue-600 text-white hover:bg-blue-700 shadow-lg hover:shadow-xl;
+  @apply bg-blue-600 text-white hover:bg-blue-700 shadow-lg hover:shadow-xl focus:ring-blue-500;
 }
 
 .btn-outline {
-  @apply border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white;
+  @apply border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white focus:ring-blue-500;
 }
 
 .hero-image {
@@ -110,7 +123,7 @@
 }
 
 .feature-card {
-  @apply p-6 rounded-xl bg-white shadow-lg hover:shadow-xl transition-shadow;
+  @apply p-8 rounded-xl bg-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1;
 }
 
 /* Animations Classes */
@@ -133,7 +146,7 @@
   }
   
   .nav-menu {
-    @apply fixed top-16 left-0 w-full bg-white/90 backdrop-blur-sm p-4 flex-col items-start gap-2 shadow-lg transform transition-transform duration-300;
+    @apply fixed top-16 left-0 w-full bg-white/95 backdrop-blur-sm p-4 flex-col items-start gap-2 shadow-lg transform transition-transform duration-300;
   }
   
   .nav-menu.hidden {
@@ -143,4 +156,30 @@
   .nav-link {
     @apply w-full text-center;
   }
+  
+  .auth-buttons {
+    @apply flex-col w-full gap-2;
+  }
+  
+  .btn-modern {
+    @apply w-full text-center;
+  }
+}
+
+/* Custom Utilities */
+.gradient-text {
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-blue-400;
+}
+
+.hover-lift {
+  @apply transition-transform duration-300 hover:-translate-y-1;
+}
+
+.shadow-soft {
+  @apply shadow-lg hover:shadow-xl transition-shadow duration-300;
+}
+
+/* Stat Cards */
+.stat-card {
+  @apply p-6 bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1;
 } 
