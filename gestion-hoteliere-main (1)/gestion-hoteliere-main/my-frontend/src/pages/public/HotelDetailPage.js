@@ -81,15 +81,29 @@ const HotelDetailPage = () => {
 
 
     setIsSubmitting(true);
+
+    // Find the roomTypeId from the selectedRoomType string
+    const roomTypeObj = hotel.rooms.find(room => room.type === selectedRoomType);
+    if (!roomTypeObj) {
+        setReservationError('Selected room type details not found. Please try again.');
+        setIsSubmitting(false);
+        return;
+    }
+    // Assuming the room object has an 'id' property for roomTypeId.
+    // This needs to match the actual property name in your hotel.rooms objects.
+    const roomTypeId = roomTypeObj.id; 
+
     const reservationDetails = {
-      hotelId: hotel.id,
-      hotelName: hotel.name,
-      userId: user.id,
-      userEmail: user.email,
-      roomType: selectedRoomType,
-      numRooms: parseInt(numRooms, 10), // Ensure numRooms is an integer
-      startDate,
-      endDate,
+      hotelId: hotel.id, // This should be the integer ID of the hotel
+      checkInDate: startDate, // Renamed from startDate
+      checkOutDate: endDate,  // Renamed from endDate
+      rooms: [
+        {
+          roomTypeId: roomTypeId, // Integer ID of the room type
+          quantity: parseInt(numRooms, 10)
+        }
+      ]
+      // hotelName, userId, userEmail are removed as they are not needed by the backend
     };
     console.log('HotelDetailPage: Submitting reservation with details:', reservationDetails);
 
