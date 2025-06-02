@@ -81,30 +81,53 @@ const HotelDetailPage = () => {
 
 
     setIsSubmitting(true);
-    const reservationDetails = {
-      hotelId: hotel.id,
-      hotelName: hotel.name,
-      userId: user.id,
-      userEmail: user.email,
-      roomType: selectedRoomType,
-      numRooms: parseInt(numRooms, 10), // Ensure numRooms is an integer
-      startDate,
-      endDate,
+
+    // Adapt payload for the new reservationService
+    // Ensure hotel.id, selectedRoomType, and numRooms are correctly sourced and parsed.
+    // Assuming selectedRoomType can be used as roomTypeId for now.
+    // This might need adjustment if selectedRoomType is a name and the backend expects an ID.
+    const roomTypeId = hotel.rooms?.find(room => room.type === selectedRoomType)?.id || selectedRoomType;
+
+
+    const reservationPayload = {
+      hotelId: parseInt(hotel.id, 10), // Ensure hotelId is an integer
+      checkInDate: new Date(startDate).toISOString(), // Convert to ISO string
+      checkOutDate: new Date(endDate).toISOString(),   // Convert to ISO string
+      rooms: [{
+        roomTypeId: roomTypeId, // Assuming selectedRoomType is the ID or can be mapped to an ID.
+                                      // If selectedRoomType is just a name, this needs to be an actual ID.
+                                      // For now, we'll pass it as is, or an actual ID if available.
+                                      // This is a placeholder and might need to be an integer if backend expects that.
+        quantity: parseInt(numRooms, 10),
+      }],
+      // specialRequests: "", // Add if special requests field exists
     };
-    console.log('HotelDetailPage: Submitting reservation with details:', reservationDetails);
+
+    console.log('HotelDetailPage: Submitting reservation with payload:', reservationPayload);
 
     try {
-      const result = await createReservation(reservationDetails);
-      setReservationMessage(result.message);
+      const result = await createReservation(reservationPayload);
+      // The backend is expected to return { message, reservationId, referenceNumber, totalAmount }
+      // or similar upon success.
+      setReservationMessage(result.message || `Reservation confirmed! Reference: ${result.referenceNumber}`);
       console.log('HotelDetailPage: Reservation submitted successfully:', result);
+      
       // Clear form or redirect
       setStartDate('');
       setEndDate('');
+      // setSelectedRoomType(hotel.rooms && hotel.rooms.length > 0 ? hotel.rooms[0].type : ''); // Reset room type
       setNumRooms(1);
-      // navigate('/client/reservations'); // Optional: redirect after success
+      
+      // Optionally, navigate to reservations page
+      // navigate('/client/reservations');
+      alert(`Reservation created successfully! Your reference number is ${result.referenceNumber}. Total amount: ${result.totalAmount}`);
+
     } catch (err) {
-      setReservationError(err.message || 'Failed to submit reservation.');
-      console.error('HotelDetailPage: Error submitting reservation:', err);
+      // err.data might contain more specific error details from the backend
+      const backendErrorMessage = err.data?.message || err.data?.error;
+      setReservationError(backendErrorMessage || err.message || 'Failed to submit reservation.');
+      console.error('HotelDetailPage: Error submitting reservation:', err.data || err);
+      alert(`Error creating reservation: ${backendErrorMessage || err.message}`);
     }
     setIsSubmitting(false);
   };

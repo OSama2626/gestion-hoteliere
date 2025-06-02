@@ -11,16 +11,22 @@ const ReservationsPage = () => {
   const [message, setMessage] = useState(''); // For success/info messages
 
   const fetchUserReservations = useCallback(async () => {
+    // Log user.id and current reservations state at the beginning of the function
+    console.log('fetchUserReservations: user.id:', user?.id, 'current reservations:', reservations);
     if (isAuthenticated && user && user.id) { // Ensure user and user.id are available
       console.log(`ReservationsPage: Fetching reservations for user ID: ${user.id}`);
       setLoading(true);
       setError('');
       setMessage('');
       try {
-        const data = await getReservationsForUser(user.id);
+        const data = await getReservationsForUser(); // Removed user.id argument
+        // Log fetched data and state before setReservations
+        console.log('fetchUserReservations: data received:', data, 'state before setReservations:', reservations);
         setReservations(data);
         console.log('ReservationsPage: Reservations data received:', data);
       } catch (err) {
+        // Log error
+        console.error('fetchUserReservations: error:', err);
         setError(err.message || 'Failed to fetch reservations.');
         console.error('ReservationsPage: Error fetching reservations:', err);
       }
@@ -51,14 +57,20 @@ const ReservationsPage = () => {
 
     const confirmCancel = window.confirm("Are you sure you want to cancel this reservation?");
     if (confirmCancel) {
+      // Log current reservations state before calling cancelReservation
+      console.log('handleCancelReservation: before cancelReservation, reservations:', reservations);
       console.log(`ReservationsPage: Attempting to cancel reservation ID: ${reservationId} for user ID: ${user.id}`);
       try {
-        const result = await cancelReservation(reservationId, user.id);
+        const result = await cancelReservation(reservationId); // Removed user.id argument
+        // Log success message and current reservations state after cancelReservation succeeds
+        console.log('handleCancelReservation: cancelReservation succeeded, result:', result, 'reservations before fetch:', reservations);
         setMessage(result.message);
         console.log('ReservationsPage: Cancellation successful:', result);
         // Refresh reservations list
         fetchUserReservations();
       } catch (err) {
+        // Log error and reservations state
+        console.error('handleCancelReservation: error cancelling reservation:', err, 'reservations state:', reservations);
         setError(err.message || 'Failed to cancel reservation.');
         console.error('ReservationsPage: Error cancelling reservation:', err);
       }
@@ -80,14 +92,21 @@ const ReservationsPage = () => {
 
   if (loading) return <p>Loading your reservations...</p>;
 
+  // Derive activeReservations before the return statement
+  const activeReservations = reservations.filter(
+    res => res.status !== 'cancelled_by_client' && res.status !== 'completed'
+  );
+
   return (
     <div>
       <h1>My Reservations</h1>
       {error && <p style={{ color: 'red', fontWeight: 'bold' }}>Error: {error}</p>}
       {message && <p style={{ color: 'green', fontWeight: 'bold' }}>{message}</p>}
 
-      {reservations.length === 0 && !error ? ( // Check !error to avoid showing "no reservations" if there was a fetch error
-        <p>You have no reservations. Why not <Link to="/hotels">book a stay</Link>?</p>
+      {/* Log reservations, loading, and error state before conditional rendering */}
+      {console.log('Render JSX: reservations:', reservations, 'loading:', loading, 'error:', error, 'activeReservations:', activeReservations)}
+      {activeReservations.length === 0 && !error ? ( // Check !error to avoid showing "no reservations" if there was a fetch error
+        <p>You have no active reservations. Why not <Link to="/hotels">book a stay</Link>?</p>
       ) : (
         <ul style={{ listStyleType: 'none', padding: 0 }}>
           {reservations.map(res => (

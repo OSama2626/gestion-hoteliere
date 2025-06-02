@@ -1,4 +1,4 @@
-content: |
+
   // src/services/reservationService.js
   import { addNotification } from './notificationService'; // Assuming this will be created later
 
@@ -86,4 +86,3 @@ content: |
       }, MOCK_API_DELAY);
     });
   };
-```

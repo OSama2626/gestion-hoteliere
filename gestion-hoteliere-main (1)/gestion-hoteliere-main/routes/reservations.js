@@ -9,6 +9,28 @@ const logger = require('../utils/logger');
 
 const router = express.Router();
 
+
+// Add this after your existing router definitions, but before module.exports
+
+// Fetch reservations for the current authenticated user
+router.get('/my-reservations', authenticateToken, async (req, res) => {
+  try {
+    // Replace this query with your actual reservation table/fields as needed
+    const [reservations] = await db.execute(
+      `SELECT r.*, h.name AS hotel_name 
+       FROM reservations r
+       JOIN hotels h ON r.hotel_id = h.id
+       WHERE r.user_id = ?
+       ORDER BY r.check_in_date DESC`,
+      [req.user.id]
+    );
+
+    res.json(reservations);
+  } catch (error) {
+    logger.error('Erreur récupération réservations:', error);
+    res.status(500).json({ error: 'Erreur interne du serveur' });
+  }
+});
 // Créer une réservation
 router.post('/', authenticateToken, [
   body('hotelId').isInt({ min: 1 }),
@@ -146,35 +168,41 @@ router.post('/', authenticateToken, [
   }
 });
 
-// Récupérer les réservations d'un utilisateur
-router.get('/my-reservations', authenticateToken, [
-  query('status').optional().isIn(['pending', 'confirmed', 'cancelled', 'completed'])
-], async (req, res) => {
+// Récupérer une réservation avec ses chambres
+router.get('/:id', authenticateToken, async (req, res) => {
+  const reservationId = req.params.id;
   try {
-    const { status } = req.query;
-    let queryParams = [req.user.id];
-    let sql = `
-      SELECT r.*, h.name AS hotel_name 
-      FROM reservations r
-      JOIN hotels h ON r.hotel_id = h.id
-      WHERE r.user_id = ?
-    `;
-
-    if (status) {
-      sql += ' AND r.status = ?';
-      queryParams.push(status);
+    // Get the reservation (with hotel info, optional)
+    const [reservations] = await db.execute(
+      `SELECT r.*, h.name AS hotel_name
+       FROM reservations r
+       JOIN hotels h ON r.hotel_id = h.id
+       WHERE r.id = ? AND r.user_id = ?`,
+      [reservationId, req.user.id]
+    );
+    if (reservations.length === 0) {
+      return res.status(404).json({ error: 'Réservation non trouvée' });
     }
+    const reservation = reservations[0];
 
-    sql += ' ORDER BY r.check_in_date DESC';
-    const [reservations] = await db.execute(sql, queryParams);
+    // Get all rooms for this reservation
+    const [rooms] = await db.execute(
+      `SELECT rr.*, rt.name AS room_type_name
+       FROM reservation_rooms rr
+       JOIN room_types rt ON rr.room_type_id = rt.id
+       WHERE rr.reservation_id = ?`,
+      [reservationId]
+    );
 
-    res.json(reservations);
+    // Attach rooms array to reservation object
+    reservation.rooms = rooms;
+
+    res.json(reservation);
   } catch (error) {
-    logger.error('Erreur récupération réservations:', error);
+    logger.error('Erreur récupération réservation avec chambres:', error);
     res.status(500).json({ error: 'Erreur interne du serveur' });
   }
 });
-
 // Annuler une réservation
 router.patch('/:id/cancel', authenticateToken, async (req, res) => {
   const connection = await db.getConnection();
