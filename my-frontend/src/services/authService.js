@@ -3,28 +3,33 @@
 const MOCK_API_DELAY = 1000;
 
 // Mock user database
-let mockUsers = [];
+let mockUsers = []; // This might be kept for other mock functions or removed if all are migrated.
 
-export const signup = async (email, password, name = '') => {
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      if (mockUsers.find(user => user.email === email)) {
-        reject({ message: 'User already exists' });
-      } else {
-        const newUser = {
-          id: Date.now().toString(),
-          email,
-          password, // In a real app, this would be hashed
-          name: name || email.split('@')[0], // Default name from email part
-          role: 'user' // Default role for new sign-ups
-        };
-        mockUsers.push(newUser);
-        console.log('Mock Users after signup:', mockUsers);
-        const mockToken = 'mock-jwt-token-for-' + newUser.id; // Use newUser.id for uniqueness
-        resolve({ token: mockToken, user: { id: newUser.id, email: newUser.email, name: newUser.name, role: newUser.role } });
-      }
-    }, MOCK_API_DELAY);
-  });
+export const signup = async (userData) => {
+  try {
+    const response = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(userData),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      // If server responds with an error status, throw an error with the message from the server
+      throw new Error(data.message || `HTTP error! status: ${response.status}`);
+    }
+
+    return data; // Expected to be { token, user }
+  } catch (error) {
+    console.error('Signup service error:', error);
+    // Re-throw the error so it can be caught by the calling component (e.g., SignupPage)
+    // If error.message is already set (e.g. by `throw new Error(data.message ...)`), use it.
+    // Otherwise, provide a generic error message.
+    throw new Error(error.message || 'An unexpected error occurred during signup.');
+  }
 };
 
 export const login = async (email, password) => {

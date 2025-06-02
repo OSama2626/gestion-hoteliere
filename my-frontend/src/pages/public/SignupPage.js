@@ -6,7 +6,11 @@ import Input from '../../components/common/forms/Input'; // Assuming this path i
 import Button from '../../components/common/forms/Button'; // Assuming this path is correct
 
 const SignupPage = () => {
-  const [name, setName] = useState(''); // Added name state
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [userType, setUserType] = useState('individual'); // Default to 'individual'
+  const [companyName, setCompanyName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -16,10 +20,23 @@ const SignupPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    console.log(`Signup attempt with name: ${name}, email: ${email}`);
+    const signupData = {
+      email,
+      password,
+      firstName,
+      lastName,
+      phone,
+      userType,
+    };
+    if (userType === 'company') {
+      signupData.companyName = companyName;
+    }
+    console.log(`Signup attempt with data:`, signupData);
     try {
-      const { token, user } = await signupService(email, password, name); // Pass name
-      authSignup(user, token); // user from service now includes name and role
+      // Adapt the call to signupService to pass an object.
+      // The actual modification of signupService to accept this object will be a separate step.
+      const { token, user } = await signupService(signupData);
+      authSignup(user, token);
 
       console.log(`Signup successful, user data from service:`, user);
       console.log(`Navigating to /client/dashboard (user role: ${user.role})`);
@@ -44,13 +61,51 @@ const SignupPage = () => {
       <h1>Signup Page</h1>
       <form onSubmit={handleSubmit}>
         <Input
-          label="Name" // Added Name field
+          label="First Name"
           type="text"
-          id="name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
+          id="firstName"
+          value={firstName}
+          onChange={(e) => setFirstName(e.target.value)}
           required
         />
+        <Input
+          label="Last Name"
+          type="text"
+          id="lastName"
+          value={lastName}
+          onChange={(e) => setLastName(e.target.value)}
+          required
+        />
+        <Input
+          label="Phone"
+          type="tel"
+          id="phone"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          required
+        />
+        <div>
+          <label htmlFor="userType">User Type:</label>
+          <select
+            id="userType"
+            value={userType}
+            onChange={(e) => setUserType(e.target.value)}
+            required
+          >
+            <option value="individual">Individual</option>
+            <option value="company">Company</option>
+          </select>
+        </div>
+        {userType === 'company' && (
+          <Input
+            label="Company Name"
+            type="text"
+            id="companyName"
+            value={companyName}
+            onChange={(e) => setCompanyName(e.target.value)}
+            required
+          />
+        )}
         <Input
           label="Email"
           type="email"
