@@ -1,4 +1,3 @@
-// routes/auth.js - Routes d'authentification complètes
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -24,10 +23,24 @@ router.post('/register', [
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      logger.warn('Validation errors during registration:', errors.array());
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { email, password, firstName, lastName, phone, userType, companyName } = req.body;
+    let { email, password, firstName, lastName, phone, userType, companyName } = req.body;
+
+    // Defensive: set defaults for optional fields
+    phone = phone || null;
+    userType = userType || 'individual';
+    companyName = companyName || null;
+
+    // Defensive: check ROLES.CLIENT exists
+    if (!ROLES || !ROLES.CLIENT) {
+      logger.error('ROLES.CLIENT is undefined. Check your utils/constants.js!');
+      return res.status(500).json({ error: 'Role configuration error.' });
+    }
+
+    logger.info('Attempting registration with:', { email, firstName, lastName, phone, userType, companyName, role: ROLES.CLIENT });
 
     const [existingUsers] = await db.execute(
       'SELECT id FROM users WHERE email = ?',
@@ -35,6 +48,7 @@ router.post('/register', [
     );
 
     if (existingUsers.length > 0) {
+      logger.warn('Attempted registration with existing email:', email);
       return res.status(400).json({ error: 'Cet email est déjà utilisé' });
     }
 
@@ -42,79 +56,26 @@ router.post('/register', [
 
     const [result] = await db.execute(
       `INSERT INTO users (email, password_hash, first_name, last_name, phone, user_type, company_name, role)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, // Changed 'client' to ?
-      [email, hashedPassword, firstName, lastName, phone, userType || 'individual', companyName, ROLES.CLIENT] // Added ROLES.CLIENT
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [email, hashedPassword, firstName, lastName, phone, userType, companyName, ROLES.CLIENT]
     );
 
-    await sendEmail(email, 'Bienvenue !', 'Votre compte a été créé avec succès.');
+    try {
+      await sendEmail(email, 'Bienvenue !', 'Votre compte a été créé avec succès.');
+    } catch (mailErr) {
+      logger.error('Erreur lors de l\'envoi du mail:', mailErr);
+      // Don't fail registration if email fails; just log it
+    }
 
-    logger.info(`Nouvel utilisateur enregistré: ${email}`);
+    logger.info(`Nouvel utilisateur enregistré: ${email} (ID: ${result.insertId})`);
     res.status(201).json({ message: 'Compte créé avec succès', userId: result.insertId });
 
   } catch (error) {
-    logger.error('Erreur lors de l\'inscription:', error);
+    logger.error('Erreur lors de l\'inscription:', error.stack || error);
     res.status(500).json({ error: 'Erreur interne du serveur' });
   }
 });
 
-// Connexion
-router.post('/login', [
-  body('email').isEmail().normalizeEmail(),
-  body('password').exists()
-], async (req, res) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-
-    const { email, password } = req.body;
-
-    const [users] = await db.execute(
-      'SELECT * FROM users WHERE email = ? AND is_active = TRUE',
-      [email]
-    );
-
-    if (users.length === 0) {
-      return res.status(401).json({ error: 'Identifiants invalides' });
-    }
-
-    const user = users[0];
-
-    const isValidPassword = await bcrypt.compare(password, user.password_hash);
-    if (!isValidPassword) {
-      return res.status(401).json({ error: 'Identifiants invalides' });
-    }
-
-    // Vérifier si 2FA est activé
-    if (user.two_factor_enabled) {
-      return res.json({ 
-        requiresTwoFactor: true, 
-        userId: user.id,
-        message: 'Code 2FA requis'
-      });
-    }
-
-    const token = jwt.sign(
-      { userId: user.id, email: user.email, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: '24h' }
-    );
-
-    const { password_hash, two_factor_secret, ...userInfo } = user;
-    
-    logger.info(`Connexion réussie pour: ${email}`);
-    res.json({ 
-      token, 
-      user: userInfo,
-      message: 'Connexion réussie'
-    });
-
-  } catch (error) {
-    logger.error('Erreur lors de la connexion:', error);
-    res.status(500).json({ error: 'Erreur interne du serveur' });
-  }
-});
 
 // Vérification 2FA
 router.post('/verify-2fa', [

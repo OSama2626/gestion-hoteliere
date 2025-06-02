@@ -1,33 +1,65 @@
-```javascript
 // Mock API delay
 const MOCK_API_DELAY = 1000;
 
 // Mock user database
 let mockUsers = []; // This might be kept for other mock functions or removed if all are migrated.
 
+export const getToken = () => {
+  return localStorage.getItem('authToken');
+};
+
 export const signup = async (userData) => {
+  // Ensure the request matches backend expectations: firstName, lastName, email, password (required)
+  // phone, userType, companyName are optional
+  const {
+    firstName,
+    lastName,
+    email,
+    password,
+    phone,
+    userType,
+    companyName,
+  } = userData;
+
+  // Validate required fields before sending to backend
+  if (!firstName || !lastName || !email || !password) {
+    throw new Error("All required fields must be filled: first name, last name, email, password.");
+  }
+
   try {
     const response = await fetch('/api/auth/register', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(userData),
+      body: JSON.stringify({
+        firstName,
+        lastName,
+        email,
+        password,
+        phone,
+        userType,
+        companyName,
+      }),
     });
 
     const data = await response.json();
 
     if (!response.ok) {
-      // If server responds with an error status, throw an error with the message from the server
+      // If server responds with an error status, throw an error with the message from the server or validation errors
+      // Prefer backend's "error" or "errors" fields if present
+      if (data.error) {
+        throw new Error(data.error);
+      } else if (data.errors && Array.isArray(data.errors) && data.errors.length > 0) {
+        // express-validator style: errors: [{msg: "...", param: "..."}]
+        throw new Error(data.errors.map(e => `${e.param}: ${e.msg}`).join("; "));
+      }
       throw new Error(data.message || `HTTP error! status: ${response.status}`);
     }
 
-    return data; // Expected to be { token, user }
+    return data; // Expected to be { message, userId } or similar
   } catch (error) {
     console.error('Signup service error:', error);
-    // Re-throw the error so it can be caught by the calling component (e.g., SignupPage)
-    // If error.message is already set (e.g. by `throw new Error(data.message ...)`), use it.
-    // Otherwise, provide a generic error message.
     throw new Error(error.message || 'An unexpected error occurred during signup.');
   }
 };
@@ -84,4 +116,3 @@ export const updateUserProfile = async (userId, profileData) => {
     }, MOCK_API_DELAY);
   });
 };
-```

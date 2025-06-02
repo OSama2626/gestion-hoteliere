@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react'; // Added useCallback
 import { getToken as getStoredToken, getCurrentUser as getStoredUser, logout as authServiceLogout } from '../../services/authService';
 import { getNotificationsForUser as fetchUserNotifications } from '../../services/notificationService'; // Alias import
+import { getCurrentUser } from '../../services/authService';
 
 const AuthContext = createContext(null);
 
