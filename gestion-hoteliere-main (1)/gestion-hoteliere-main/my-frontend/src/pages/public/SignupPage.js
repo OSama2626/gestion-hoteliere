@@ -35,11 +35,10 @@ const SignupPage = () => {
     try {
       // Adapt the call to signupService to pass an object.
       // The actual modification of signupService to accept this object will be a separate step.
-      const { token, user } = await signupService(signupData);
-      authSignup(user, token);
-
-      console.log(`Signup successful, user data from service:`, user);
-      console.log(`Navigating to /client/dashboard (user role: ${user.role})`);
+      const data = await signupService(signupData);
+      // Optionally, you could add user info here if your backend returns it
+      // For now, just redirect after success
+      console.log(`Signup successful, userId from service:`, data.userId);
       navigate('/client/dashboard', { replace: true });
     } catch (err) {
       setError(err.message || 'Failed to signup');
