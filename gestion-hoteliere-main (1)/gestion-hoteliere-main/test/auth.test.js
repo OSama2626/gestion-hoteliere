@@ -131,6 +131,52 @@ describe('User Registration (POST /api/auth/register)', () => {
     expect(res.statusCode).toEqual(400);
     expect(res.body.errors[0].path).toBe('lastName');
   });
+
+  it('should register a new user and return token and user object', async () => {
+    const uniqueEmail = `testuser_${Date.now()}@example.com`;
+    const newUser = {
+      email: uniqueEmail,
+      password: 'password123',
+      firstName: 'Test',
+      lastName: 'User Token',
+      phone: '1234567890',
+      userType: 'individual',
+    };
+
+    const res = await request(app)
+      .post('/api/auth/register')
+      .send(newUser);
+
+    expect(res.statusCode).toEqual(201);
+    expect(res.body).toBeInstanceOf(Object);
+    expect(res.body).toHaveProperty('token');
+    expect(typeof res.body.token).toBe('string');
+    expect(res.body.token.length).toBeGreaterThan(0);
+    
+    expect(res.body).toHaveProperty('user');
+    const user = res.body.user;
+    expect(user).toBeInstanceOf(Object);
+    expect(user).toHaveProperty('id');
+    expect(typeof user.id).toBe('number');
+    expect(user.email).toBe(newUser.email);
+    expect(user.first_name).toBe(newUser.firstName);
+    expect(user.last_name).toBe(newUser.lastName);
+    expect(user.phone).toBe(newUser.phone);
+    expect(user.user_type).toBe(newUser.userType);
+    expect(user).toHaveProperty('role'); // Assuming 'client' is a default role
+    expect(user.role).toBe(ROLES.CLIENT); 
+
+    expect(user).not.toHaveProperty('password_hash');
+    expect(user).not.toHaveProperty('two_factor_secret');
+    
+    // Verify email was called for this new test as well
+    expect(sendEmail).toHaveBeenCalledTimes(1);
+    expect(sendEmail).toHaveBeenCalledWith(
+      newUser.email,
+      'Bienvenue !',
+      'Votre compte a été créé avec succès.'
+    );
+  });
 });
 
 describe('User Login (POST /api/auth/login)', () => {

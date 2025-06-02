@@ -38,13 +38,22 @@ router.post('/register', [
       return res.status(400).json({ error: 'Cet email est déjà utilisé' });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 12);
+const hashedPassword = await bcrypt.hash(password, 12);
 
-    const [result] = await db.execute(
-      `INSERT INTO users (email, password_hash, first_name, last_name, phone, user_type, company_name, role)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, // Changed 'client' to ?
-      [email, hashedPassword, firstName, lastName, phone, userType || 'individual', companyName, ROLES.CLIENT] // Added ROLES.CLIENT
-    );
+const [result] = await db.execute(
+  `INSERT INTO users (email, password_hash, first_name, last_name, phone, user_type, company_name, role)
+   VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+  [
+    email,
+    hashedPassword,
+    firstName,
+    lastName,
+    phone ?? null,
+    userType ?? 'individual',
+    companyName ?? null,
+    ROLES.CLIENT
+  ]
+);
 
     await sendEmail(email, 'Bienvenue !', 'Votre compte a été créé avec succès.');
 
