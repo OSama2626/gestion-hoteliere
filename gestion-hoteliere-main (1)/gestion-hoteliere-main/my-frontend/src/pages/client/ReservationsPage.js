@@ -112,12 +112,17 @@ const ReservationsPage = () => {
           {reservations.map(res => (
             <li key={res.id} style={{ border: '1px solid #eee', borderRadius: '5px', marginBottom: '15px', padding: '15px', boxShadow: '2px 2px 5px #ccc' }}>
               <h3>Reservation ID: {res.id}</h3>
+              <p><strong>Reference Number:</strong> {res.reference_number || 'N/A'}</p>
               <p><strong>Hotel:</strong> {res.hotelName || 'N/A'}</p>
               <p><strong>Room Type:</strong> {res.roomType}</p>
               <p><strong>Number of Rooms:</strong> {res.numRooms}</p>
               <p><strong>Check-in:</strong> {new Date(res.startDate).toLocaleDateString()}</p>
               <p><strong>Check-out:</strong> {new Date(res.endDate).toLocaleDateString()}</p>
+              <p><strong>Total Amount:</strong> ${res.total_amount ? res.total_amount.toFixed(2) : 'N/A'}</p>
+              <p><strong>Payment Status:</strong> {res.payment_status ? res.payment_status.replace(/_/g, ' ') : 'N/A'}</p>
               <p><strong>Status:</strong> <span style={{ fontWeight: 'bold', color: res.status === 'cancelled_by_client' ? 'red' : (res.status === 'confirmed' ? 'green' : 'orange')}}>{(res.status || 'Unknown').replace(/_/g, ' ')}</span></p>
+              {res.special_requests && <p><strong>Special Requests:</strong> {res.special_requests}</p>}
+              {res.bookingSource && <p><strong>Booking Source:</strong> {res.bookingSource}</p>}
               <p><em>Booked on: {new Date(res.createdAt).toLocaleString()} by {res.userEmail}</em></p>
 
               {['pending_admin_validation', 'confirmed'].includes(res.status) && (

@@ -2,44 +2,47 @@
 const MOCK_API_DELAY = 500;
 
 // Mock hotel database
+// MODIFIED structure for that hotel:
 const mockHotels = [
-  {
-    id: '1',
+  { // Hotel 1
+    id: '1', // Hotel ID
     name: 'Grand Plaza Hotel',
     address: '123 Main St',
     city: 'Metropolis',
     category: '5 stars',
     rooms: [
-      { type: 'Simple', price: { standard: 100, peak: 150 }, available: 10 },
-      { type: 'Double', price: { standard: 180, peak: 250 }, available: 5 },
-      { type: 'Suite', price: { standard: 300, peak: 450 }, available: 2 }
+      // Added roomTypeId to each room:
+      { roomTypeId: 1, type: 'Simple', price: { standard: 100, peak: 150 }, available: 100 },
+      { roomTypeId: 2, type: 'Double', price: { standard: 180, peak: 250 }, available: 500 },
+      { roomTypeId: 4, type: 'Suite', price: { standard: 300, peak: 450 }, available: 200 }
     ],
-    images: ['/placeholder-hotel-1.jpg', '/placeholder-hotel-2.jpg'] // Example image paths
+    images: ['/placeholder-hotel-1.jpg', '/placeholder-hotel-2.jpg']
   },
-  {
+  { // Hotel 2
     id: '2',
     name: 'Comfort Inn Downtown',
     address: '456 Central Ave',
     city: 'Metropolis',
     category: '4 stars',
     rooms: [
-      { type: 'Simple', price: { standard: 80, peak: 120 }, available: 15 },
-      { type: 'Double Confort', price: { standard: 150, peak: 200 }, available: 8 }
+      { roomTypeId: 1, type: 'Simple', price: { standard: 80, peak: 120 }, available: 115 },
+      { roomTypeId: 3, type: 'Double Confort', price: { standard: 150, peak: 200 }, available: 118 }
     ],
     images: ['/placeholder-hotel-3.jpg']
   },
-  {
+  { // Hotel 3
     id: '3',
     name: 'Seaside Resort',
     address: '789 Ocean Drive',
     city: 'Beach City',
     category: '4 stars',
     rooms: [
-      { type: 'Double', price: { standard: 200, peak: 280 }, available: 10 },
-      { type: 'Suite', price: { standard: 350, peak: 500 }, available: 5 }
+      { roomTypeId: 2, type: 'Double', price: { standard: 200, peak: 280 }, available: 110 },
+      { roomTypeId: 4, type: 'Suite', price: { standard: 350, peak: 500 }, available: 115 }
     ],
-    images: [] // No images for this one, will use default
+    images: []
   }
+  // ... and so on for any other hotels
 ];
 
 // Function to determine current season (mock)

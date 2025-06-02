@@ -19,6 +19,7 @@ const HotelDetailPage = () => {
   const [endDate, setEndDate] = useState('');
   const [selectedRoomType, setSelectedRoomType] = useState('');
   const [numRooms, setNumRooms] = useState(1);
+  const [specialRequests, setSpecialRequests] = useState(''); // Added special requests state
   const [reservationMessage, setReservationMessage] = useState('');
   const [reservationError, setReservationError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false); // For reservation submission
@@ -37,8 +38,12 @@ const HotelDetailPage = () => {
         const data = await getHotelById(hotelId);
         setHotel(data);
         console.log('HotelDetailPage: Hotel data fetched successfully:', data);
-        if (data && data.rooms && data.rooms.length > 0) {
-          setSelectedRoomType(data.rooms[0].type);
+        if (data && data.rooms && data.rooms.length > 0 && data.rooms[0].roomTypeId !== undefined) {
+          setSelectedRoomType(data.rooms[0].roomTypeId.toString());
+        } else if (data && data.rooms && data.rooms.length > 0) {
+          // Fallback or error if roomTypeId is missing, though ideally it should always be there
+          console.warn("HotelDetailPage: First room is missing roomTypeId. Falling back to empty selection or first available type if necessary.");
+          setSelectedRoomType(''); // Or handle differently, e.g., select first available if any
         }
       } catch (err) {
         console.error('HotelDetailPage: Error fetching hotel details:', err);
@@ -84,23 +89,18 @@ const HotelDetailPage = () => {
 
     // Adapt payload for the new reservationService
     // Ensure hotel.id, selectedRoomType, and numRooms are correctly sourced and parsed.
-    // Assuming selectedRoomType can be used as roomTypeId for now.
-    // This might need adjustment if selectedRoomType is a name and the backend expects an ID.
-    const roomTypeId = hotel.rooms?.find(room => room.type === selectedRoomType)?.id || selectedRoomType;
-
+    // selectedRoomType now holds the roomTypeId (as a string from the form)
 
     const reservationPayload = {
       hotelId: parseInt(hotel.id, 10), // Ensure hotelId is an integer
       checkInDate: new Date(startDate).toISOString(), // Convert to ISO string
       checkOutDate: new Date(endDate).toISOString(),   // Convert to ISO string
       rooms: [{
-        roomTypeId: roomTypeId, // Assuming selectedRoomType is the ID or can be mapped to an ID.
-                                      // If selectedRoomType is just a name, this needs to be an actual ID.
-                                      // For now, we'll pass it as is, or an actual ID if available.
-                                      // This is a placeholder and might need to be an integer if backend expects that.
+        roomTypeId: parseInt(selectedRoomType, 10), // selectedRoomType is the ID, parse to int
         quantity: parseInt(numRooms, 10),
       }],
-      // specialRequests: "", // Add if special requests field exists
+      specialRequests: specialRequests, // Add if special requests field exists
+      bookingSource: 'website' // Added booking source
     };
 
     console.log('HotelDetailPage: Submitting reservation with payload:', reservationPayload);
@@ -111,13 +111,14 @@ const HotelDetailPage = () => {
       // or similar upon success.
       setReservationMessage(result.message || `Reservation confirmed! Reference: ${result.referenceNumber}`);
       console.log('HotelDetailPage: Reservation submitted successfully:', result);
-      
+
       // Clear form or redirect
       setStartDate('');
       setEndDate('');
-      // setSelectedRoomType(hotel.rooms && hotel.rooms.length > 0 ? hotel.rooms[0].type : ''); // Reset room type
+      setSelectedRoomType(hotel.rooms && hotel.rooms.length > 0 && hotel.rooms[0].roomTypeId !== undefined ? hotel.rooms[0].roomTypeId.toString() : ''); // Reset room type
       setNumRooms(1);
-      
+      setSpecialRequests(''); // Clear special requests on success
+
       // Optionally, navigate to reservations page
       // navigate('/client/reservations');
       alert(`Reservation created successfully! Your reference number is ${result.referenceNumber}. Total amount: ${result.totalAmount}`);
@@ -202,8 +203,12 @@ const HotelDetailPage = () => {
           <div style={{ marginBottom: '10px' }}>
             <label htmlFor="roomType" style={{ marginRight: '10px' }}>Room Type:</label>
             <select id="roomType" value={selectedRoomType} onChange={e => setSelectedRoomType(e.target.value)} required disabled={isSubmitting || !isAuthenticated}>
-              {hotel.rooms.map(room => (
-                <option key={room.type} value={room.type}>{room.type} (${room.currentPrice})</option>
+              {hotel.rooms
+                .filter(room => room.roomTypeId !== undefined) // Ensure the ID property exists
+                .map(room => (
+                <option key={room.roomTypeId} value={room.roomTypeId}>
+                  {room.type} (${room.currentPrice}/night) - Available: {room.available}
+                </option>
               ))}
             </select>
           </div>
@@ -211,6 +216,18 @@ const HotelDetailPage = () => {
         <div style={{ marginBottom: '10px' }}>
           <label htmlFor="numRooms" style={{ marginRight: '10px' }}>Number of Rooms:</label>
           <input type="number" id="numRooms" value={numRooms} min="1" onChange={e => setNumRooms(parseInt(e.target.value))} required disabled={isSubmitting || !isAuthenticated} />
+        </div>
+
+        <div style={{ marginBottom: '10px' }}>
+          <label htmlFor="specialRequests" style={{ marginRight: '10px' }}>Special Requests:</label>
+          <textarea
+            id="specialRequests"
+            value={specialRequests}
+            onChange={e => setSpecialRequests(e.target.value)}
+            rows="3"
+            style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}
+            disabled={isSubmitting || !isAuthenticated}
+          />
         </div>
 
         {!isAuthenticated && !authLoading && (
