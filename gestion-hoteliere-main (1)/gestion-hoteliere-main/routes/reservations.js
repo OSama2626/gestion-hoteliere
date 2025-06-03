@@ -236,7 +236,7 @@ router.patch('/:id/cancel', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Annulation non autorisée' });
     }
 
-    if (moment().isAfter(moment(reservation.check_in_date).subtract(2, 'days'))) {
+    if (moment().isAfter(moment(reservation.check_in_date).subtract(5, 'days'))) {
       return res.status(400).json({ error: 'Annulation trop tardive' });
     }
 
