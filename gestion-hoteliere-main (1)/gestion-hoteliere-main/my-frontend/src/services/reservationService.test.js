@@ -1,10 +1,10 @@
-import { createReservation } from './reservationService';
+import { createReservation, cancelReservation } from './reservationService'; // Add cancelReservation
 import { getToken } from './authService';
 import { addNotification } from './notificationService';
 
 // Mock the imported services
-jest.mock('./authService');
-jest.mock('./notificationService');
+// jest.mock('./authService'); // Assuming cancelReservation does not use this version of getToken
+// jest.mock('./notificationService'); // Assuming cancelReservation does not use addNotification
 
 // Mock global fetch
 global.fetch = jest.fn();
@@ -191,5 +191,80 @@ describe('createReservation in reservationService', () => {
         
         consoleErrorSpy.mockRestore(); // Restore console.error
     });
+  });
+});
+
+// New describe block for cancelReservation
+describe('cancelReservation in reservationService', () => {
+  const mockReservationId = 'res123';
+  const mockToken = 'test-auth-token';
+
+  beforeEach(() => {
+    // Clear all mocks before each test
+    fetch.mockClear();
+    // Mock localStorage.getItem for getAuthToken
+    // Correctly spyOn localStorage.getItem
+    jest.spyOn(window.localStorage.__proto__, 'getItem').mockImplementation((key) => {
+      if (key === 'authToken') {
+        return mockToken;
+      }
+      return null;
+    });
+  });
+
+  afterEach(() => {
+    // Restore localStorage.getItem mock
+    jest.restoreAllMocks();
+  });
+
+  it('should throw an error with the server\'s message when API returns 400', async () => {
+    const serverErrorMessage = 'Annulation non autorisée';
+    fetch.mockResolvedValueOnce({
+      ok: false,
+      status: 400,
+      json: async () => ({ error: serverErrorMessage }), // Backend uses { "error": "..." }
+    });
+
+    await expect(cancelReservation(mockReservationId)).rejects.toThrow(serverErrorMessage);
+
+    expect(localStorage.getItem).toHaveBeenCalledWith('authToken');
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(fetch).toHaveBeenCalledWith(`/api/reservations/${mockReservationId}/cancel`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${mockToken}`,
+      },
+    });
+  });
+
+  it('should throw an error with a generic message if JSON parsing fails for a 400 error', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: false,
+      status: 400,
+      statusText: 'Bad Request',
+      json: async () => { throw new Error('Failed to parse'); }, // Simulate JSON parsing error
+    });
+
+    // Expecting the message from handleResponse's catch block
+    await expect(cancelReservation(mockReservationId))
+      .rejects.toThrow('HTTP error! status: 400, Bad Request');
+
+    expect(localStorage.getItem).toHaveBeenCalledWith('authToken');
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('should successfully cancel reservation when API returns 200', async () => {
+    const successMessage = 'Réservation annulée avec succès';
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ message: successMessage }),
+    });
+
+    const result = await cancelReservation(mockReservationId);
+
+    expect(result).toEqual({ message: successMessage });
+    expect(localStorage.getItem).toHaveBeenCalledWith('authToken');
+    expect(fetch).toHaveBeenCalledTimes(1);
   });
 });

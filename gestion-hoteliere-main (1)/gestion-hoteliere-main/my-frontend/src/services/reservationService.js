@@ -18,13 +18,18 @@ const API_BASE_URL = '/api'; // Assuming Express serves API routes under /api
 const handleResponse = async (response) => {
   if (!response.ok) {
     let errorData;
+    let errorMessage;
     try {
       errorData = await response.json();
+      // Use server's error message if available, otherwise use a generic one.
+      // The backend sends { "error": "message" } for some errors.
+      errorMessage = errorData.message || errorData.error || `HTTP error! status: ${response.status}`;
     } catch (e) {
-      // If response is not JSON, use status text
-      errorData = { message: response.statusText };
+      // If response is not JSON or parsing fails, use status text
+      errorMessage = `HTTP error! status: ${response.status}, ${response.statusText}`;
+      errorData = { message: response.statusText }; // Keep basic error data
     }
-    const error = new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    const error = new Error(errorMessage);
     error.data = errorData; // Attach full error data if available
     error.status = response.status;
     throw error;
