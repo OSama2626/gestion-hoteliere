@@ -10,6 +10,7 @@ const { errorHandler } = require('./middleware/errorHandler');
 const logger = require('./utils/logger');
 
 const app = express();
+app.set('trust proxy', 1); // Trust the first hop
 
 // Sécurité
 app.use(helmet());
