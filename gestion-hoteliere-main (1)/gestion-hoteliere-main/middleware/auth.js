@@ -38,4 +38,14 @@ const requireRole = (roles) => {
   };
 };
 
-module.exports = { authenticateToken, requireRole };
+// Function to generate a JWT token
+const generateToken = (userPayload) => {
+  // Ensure userPayload contains id and role, or adjust as needed by your app's token claims
+  return jwt.sign(
+    { userId: userPayload.id, role: userPayload.role },
+    process.env.JWT_SECRET,
+    { expiresIn: '1h' } // Or your preferred expiration time
+  );
+};
+
+module.exports = { authenticateToken, requireRole, generateToken };

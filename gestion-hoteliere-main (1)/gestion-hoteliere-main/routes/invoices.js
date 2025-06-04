@@ -1,226 +1,212 @@
 // routes/invoices.js - Routes pour la gestion des factures
 const express = require('express');
 const router = express.Router();
+const { body, query, validationResult } = require('express-validator');
+const db = require('../config/database');
 const { authenticateToken, requireRole } = require('../middleware/auth');
+const { ROLES } = require('../utils/constants');
 const logger = require('../utils/logger');
 
-// ✅ CORRECTION: Utiliser req.body au lieu de body
+// GET /api/invoices - List all invoices with filtering (Admin/Reception)
+router.get('/',
+  authenticateToken,
+  requireRole([ROLES.ADMIN, ROLES.RECEPTION]),
+  [
+    query('page').optional().isInt({ min: 1 }).toInt(),
+    query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
+    query('clientId').optional().isInt({ min: 1 }).toInt(),
+    query('status').optional().trim().escape(),
+    query('dateFrom').optional().isISO8601(), // Issue date from
+    query('dateTo').optional().isISO8601()    // Issue date to
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
 
-// GET /api/invoices - Récupérer toutes les factures
-router.get('/', authenticateToken, async (req, res, next) => {
-  try {
-    // Logique pour récupérer les factures
-    // Remplacez par votre logique de base de données
-    const invoices = [];
-    
-    logger.info(`Récupération des factures pour l'utilisateur ${req.user.id}`);
-    
-    res.json({
-      success: true,
-      data: invoices,
-      count: invoices.length
-    });
-  } catch (error) {
-    logger.error('Erreur lors de la récupération des factures:', error);
-    next(error);
-  }
-});
+    const page = req.query.page || 1;
+    const limit = req.query.limit || 20;
+    const offset = (page - 1) * limit;
 
-// POST /api/invoices - Créer une nouvelle facture
-router.post('/', authenticateToken, async (req, res, next) => {
-  try {
-    // ✅ CORRECTION: Utilisation correcte de req.body
-    const invoiceData = req.body;
-    
-    // Validation des données requises
-    if (!invoiceData || Object.keys(invoiceData).length === 0) {
-      return res.status(400).json({
-        success: false,
-        error: 'Données de facture manquantes'
-      });
-    }
-    
-    // Validation des champs obligatoires
-    const requiredFields = ['reservationId', 'amount'];
-    const missingFields = requiredFields.filter(field => !invoiceData[field]);
-    
-    if (missingFields.length > 0) {
-      return res.status(400).json({
-        success: false,
-        error: `Champs manquants: ${missingFields.join(', ')}`
-      });
-    }
-    
-    // Création de la facture
-    const newInvoice = {
-      id: Date.now(), // Remplacez par votre logique de génération d'ID
-      ...invoiceData,
-      userId: req.user.id,
-      status: 'pending',
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-    
-    // Ici, vous sauvegarderez en base de données
-    // const savedInvoice = await Invoice.create(newInvoice);
-    
-    logger.info(`Facture créée avec succès: ${newInvoice.id}`);
-    
-    res.status(201).json({
-      success: true,
-      message: 'Facture créée avec succès',
-      data: newInvoice
-    });
-  } catch (error) {
-    logger.error('Erreur lors de la création de la facture:', error);
-    next(error);
-  }
-});
+    let sql = `SELECT i.*, u.email as client_email_display
+               FROM invoices i
+               LEFT JOIN users u ON i.client_id = u.id
+               WHERE 1=1`;
+    let countSql = `SELECT COUNT(*) as total FROM invoices i WHERE 1=1`;
 
-// GET /api/invoices/:id - Récupérer une facture par ID
-router.get('/:id', authenticateToken, async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    
-    if (!id) {
-      return res.status(400).json({
-        success: false,
-        error: 'ID de facture manquant'
-      });
-    }
-    
-    // Logique pour récupérer une facture par ID
-    // const invoice = await Invoice.findById(id);
-    const invoice = null; // Remplacez par votre logique
-    
-    if (!invoice) {
-      return res.status(404).json({
-        success: false,
-        error: 'Facture non trouvée'
-      });
-    }
-    
-    logger.info(`Facture récupérée: ${id}`);
-    
-    res.json({
-      success: true,
-      data: invoice
-    });
-  } catch (error) {
-    logger.error('Erreur lors de la récupération de la facture:', error);
-    next(error);
-  }
-});
+    const params = [];
+    const countParams = [];
 
-// PUT /api/invoices/:id - Mettre à jour une facture
-router.put('/:id', authenticateToken, async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const updateData = req.body; // ✅ CORRECTION: req.body au lieu de body
-    
-    if (!id) {
-      return res.status(400).json({
-        success: false,
-        error: 'ID de facture manquant'
-      });
+    if (req.query.clientId) {
+      sql += ' AND i.client_id = ?';
+      countSql += ' AND i.client_id = ?';
+      params.push(req.query.clientId);
+      countParams.push(req.query.clientId);
     }
-    
-    if (!updateData || Object.keys(updateData).length === 0) {
-      return res.status(400).json({
-        success: false,
-        error: 'Données de mise à jour manquantes'
-      });
+    if (req.query.status) {
+      sql += ' AND i.status = ?';
+      countSql += ' AND i.status = ?';
+      params.push(req.query.status);
+      countParams.push(req.query.status);
     }
-    
-    // Logique pour mettre à jour une facture
-    // const updatedInvoice = await Invoice.findByIdAndUpdate(id, updateData, { new: true });
-    
-    const updatedInvoice = {
-      id: id,
-      ...updateData,
-      updatedAt: new Date()
-    };
-    
-    logger.info(`Facture mise à jour: ${id}`);
-    
-    res.json({
-      success: true,
-      message: 'Facture mise à jour avec succès',
-      data: updatedInvoice
-    });
-  } catch (error) {
-    logger.error('Erreur lors de la mise à jour de la facture:', error);
-    next(error);
-  }
-});
+    if (req.query.dateFrom) {
+      sql += ' AND i.issue_date >= ?';
+      countSql += ' AND i.issue_date >= ?';
+      params.push(req.query.dateFrom);
+      countParams.push(req.query.dateFrom);
+    }
+    if (req.query.dateTo) {
+      sql += ' AND i.issue_date <= ?';
+      countSql += ' AND i.issue_date <= ?';
+      params.push(req.query.dateTo);
+      countParams.push(req.query.dateTo);
+    }
 
-// DELETE /api/invoices/:id - Supprimer une facture
-router.delete('/:id', authenticateToken, requireRole(['admin']), async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    
-    if (!id) {
-      return res.status(400).json({
-        success: false,
-        error: 'ID de facture manquant'
-      });
-    }
-    
-    // Vérifier si la facture existe
-    // const invoice = await Invoice.findById(id);
-    const invoice = null; // Remplacez par votre logique
-    
-    if (!invoice) {
-      return res.status(404).json({
-        success: false,
-        error: 'Facture non trouvée'
-      });
-    }
-    
-    // Logique pour supprimer une facture
-    // await Invoice.findByIdAndDelete(id);
-    
-    logger.info(`Facture supprimée: ${id}`);
-    
-    res.json({
-      success: true,
-      message: 'Facture supprimée avec succès',
-      deletedId: id
-    });
-  } catch (error) {
-    logger.error('Erreur lors de la suppression de la facture:', error);
-    next(error);
-  }
-});
+    sql += ' ORDER BY i.issue_date DESC, i.id DESC LIMIT ? OFFSET ?';
+    params.push(limit, offset);
 
-// GET /api/invoices/user/:userId - Récupérer les factures d'un utilisateur
-router.get('/user/:userId', authenticateToken, async (req, res, next) => {
-  try {
-    const { userId } = req.params;
-    
-    // Vérifier que l'utilisateur peut accéder à ces factures
-    if (req.user.id !== userId && req.user.role !== 'admin') {
-      return res.status(403).json({
-        success: false,
-        error: 'Accès non autorisé'
+    try {
+      const [invoices] = await db.execute(sql, params);
+      const [countResult] = await db.execute(countSql, countParams);
+      const totalItems = countResult[0].total;
+      const totalPages = Math.ceil(totalItems / limit);
+
+      res.json({
+        invoices,
+        pagination: {
+          currentPage: page,
+          totalPages,
+          totalItems,
+          itemsPerPage: limit
+        }
       });
+    } catch (error) {
+      logger.error('Erreur lors de la récupération des factures:', error);
+      res.status(500).json({ error: 'Erreur interne du serveur.'});
     }
-    
-    // Logique pour récupérer les factures d'un utilisateur
-    // const userInvoices = await Invoice.find({ userId });
-    const userInvoices = []; // Remplacez par votre logique
-    
-    logger.info(`Factures récupérées pour l'utilisateur: ${userId}`);
-    
-    res.json({
-      success: true,
-      data: userInvoices,
-      count: userInvoices.length
-    });
-  } catch (error) {
-    logger.error('Erreur lors de la récupération des factures utilisateur:', error);
-    next(error);
   }
-});
+);
+
+
+// GET /api/invoices/:invoiceId - Get specific invoice details
+router.get('/:invoiceId',
+  authenticateToken,
+  async (req, res) => {
+    const { invoiceId } = req.params;
+    try {
+      const [invoices] = await db.execute(
+        'SELECT * FROM invoices WHERE id = ?',
+        [invoiceId]
+      );
+
+      if (invoices.length === 0) {
+        return res.status(404).json({ error: 'Facture non trouvée.' });
+      }
+      const invoice = invoices[0];
+
+      // Authorization: Admin/Reception can see any. Client can only see their own.
+      const isAgent = req.user.role === ROLES.ADMIN || req.user.role === ROLES.RECEPTION;
+      if (!isAgent && req.user.id !== invoice.client_id) {
+        return res.status(403).json({ error: 'Accès non autorisé à cette facture.' });
+      }
+
+      const [items] = await db.execute(
+        'SELECT * FROM invoice_items WHERE invoice_id = ? ORDER BY item_type, description',
+        [invoiceId]
+      );
+      invoice.items = items;
+
+      res.json(invoice);
+
+    } catch (error) {
+      logger.error(`Erreur récupération facture ${invoiceId}:`, error);
+      res.status(500).json({ error: 'Erreur interne du serveur.'});
+    }
+  }
+);
+
+// POST /api/invoices/:invoiceId/send-email - Send invoice via email
+router.post('/:invoiceId/send-email',
+  authenticateToken,
+  requireRole([ROLES.ADMIN, ROLES.RECEPTION]),
+  async (req, res) => {
+    const { invoiceId } = req.params;
+    // Basic implementation: Fetch invoice, send email with summary.
+    // PDF generation and attachment is out of scope for this step.
+    // Actual email sending utility is already mocked in tests.
+    try {
+        const [invoices] = await db.execute('SELECT * FROM invoices WHERE id = ?', [invoiceId]);
+        if (invoices.length === 0) {
+            return res.status(404).json({ error: 'Facture non trouvée.' });
+        }
+        const invoice = invoices[0];
+
+        const emailSubject = `Votre facture ${invoice.invoice_reference_number}`;
+        const emailText = `
+            <h1>Facture ${invoice.invoice_reference_number}</h1>
+            <p>Bonjour ${invoice.client_name || 'Client'},</p>
+            <p>Veuillez trouver ci-joint un récapitulatif de votre facture.</p>
+            <p>Référence: ${invoice.invoice_reference_number}</p>
+            <p>Date d'émission: ${invoice.issue_date}</p>
+            <p>Montant total dû: ${invoice.total_amount_due} EUR</p>
+            <p>Pour plus de détails, veuillez contacter l'hôtel.</p>
+            <p>Cordialement,</p>
+            <p>${invoice.hotel_name}</p>
+        `;
+        // In a real app, you'd use a proper email template (HTML)
+
+        // Assuming sendEmail utility is available and imported
+        // const { sendEmail } = require('../utils/email');
+        // await sendEmail(invoice.client_email, emailSubject, emailText);
+
+        logger.info(`Tentative d'envoi par e-mail de la facture ${invoice.invoice_reference_number} à ${invoice.client_email}`);
+        res.json({ message: `La facture ${invoice.invoice_reference_number} serait envoyée à ${invoice.client_email}` });
+
+    } catch (error) {
+        logger.error(`Erreur envoi email pour facture ${invoiceId}:`, error);
+        res.status(500).json({ error: 'Erreur interne du serveur.' });
+    }
+  }
+);
+
+// GET /api/invoices/:invoiceId/download-pdf - Download invoice as PDF (stub)
+router.get('/:invoiceId/download-pdf',
+  authenticateToken, // Auth check for client vs agent similar to GET /:invoiceId
+  async (req, res) => {
+    const { invoiceId } = req.params;
+     try {
+        const [invoices] = await db.execute('SELECT client_id FROM invoices WHERE id = ?', [invoiceId]);
+        if (invoices.length === 0) {
+            return res.status(404).json({ error: 'Facture non trouvée pour le PDF.' });
+        }
+        const invoice = invoices[0];
+        const isAgent = req.user.role === ROLES.ADMIN || req.user.role === ROLES.RECEPTION;
+        if (!isAgent && req.user.id !== invoice.client_id) {
+            return res.status(403).json({ error: 'Accès non autorisé à ce PDF de facture.' });
+        }
+
+        // PDF generation logic would go here. For now, a stub.
+        logger.info(`Demande de téléchargement PDF pour la facture ${invoiceId}. Fonctionnalité non implémentée.`);
+        res.status(501).json({ message: 'La génération de PDF n\'est pas encore implémentée.', invoiceId: invoiceId });
+
+    } catch (error) {
+        logger.error(`Erreur stub PDF pour facture ${invoiceId}:`, error);
+        res.status(500).json({ error: 'Erreur interne du serveur.' });
+    }
+  }
+);
+
+
+// The existing POST, PUT, DELETE, and GET /user/:userId routes from the stub
+// are very basic and don't align with the new detailed schema or generation logic.
+// They should ideally be removed or significantly refactored if similar functionality is needed.
+// For now, I will leave them commented out or remove them to avoid conflict if they are not used.
+// /*
+// router.post('/', ...); // Old stub
+// router.put('/:id', ...); // Old stub
+// router.delete('/:id', ...); // Old stub
+// router.get('/user/:userId', ...); // Old stub
+// */
 
 module.exports = router;

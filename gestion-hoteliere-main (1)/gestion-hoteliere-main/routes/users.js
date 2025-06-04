@@ -1,11 +1,13 @@
 // routes/users.js - Gestion des utilisateurs
 const express = require('express');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const { body, validationResult, query } = require('express-validator');
 const db = require('../config/database');
 const { authenticateToken, requireRole } = require('../middleware/auth');
 const { ROLES } = require('../utils/constants'); // Added ROLES
 const logger = require('../utils/logger');
+const { sendEmail } = require('../utils/email');
 
 const router = express.Router();
 
@@ -103,8 +105,8 @@ router.put('/change-password', authenticateToken, [
   }
 });
 
-// Lister tous les utilisateurs (admin seulement)
-router.get('/', authenticateToken, requireRole([ROLES.ADMIN]), [
+// Lister tous les utilisateurs (admin ou réception)
+router.get('/', authenticateToken, requireRole([ROLES.ADMIN, ROLES.RECEPTION]), [
   query('page').optional().isInt({ min: 1 }),
   query('limit').optional().isInt({ min: 1, max: 100 }),
   query('role').optional().isIn(Object.values(ROLES)), // Used Object.values(ROLES)
@@ -119,7 +121,11 @@ router.get('/', authenticateToken, requireRole([ROLES.ADMIN]), [
     let whereClause = 'WHERE 1=1';
     let params = [];
 
-    if (role) {
+    // Si l'utilisateur est une réception, ne montrer que les clients
+    if (req.user.role === ROLES.RECEPTION) {
+      whereClause += ' AND role = ?';
+      params.push(ROLES.CLIENT);
+    } else if (role) { // Les admins peuvent filtrer par rôle
       whereClause += ' AND role = ?';
       params.push(role);
     }
@@ -257,5 +263,81 @@ router.delete('/:id', authenticateToken, requireRole([ROLES.ADMIN]), async (req,
     connection.release();
   }
 });
+
+// Créer un nouveau client (Réception ou Admin)
+router.post('/create-client',
+  authenticateToken,
+  requireRole([ROLES.ADMIN, ROLES.RECEPTION]),
+  [
+    body('email').isEmail().withMessage('Format email invalide').normalizeEmail(),
+    body('firstName').trim().isLength({ min: 2 }).withMessage('Prénom doit avoir au moins 2 caractères'),
+    body('lastName').trim().isLength({ min: 2 }).withMessage('Nom doit avoir au moins 2 caractères'),
+    body('phone').optional().trim(),
+    body('userType').optional().trim(),
+    body('companyName').optional().trim()
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { email, firstName, lastName, phone, userType, companyName } = req.body;
+
+    try {
+      // Vérifier si l'email existe déjà
+      const [existingUser] = await db.execute('SELECT id FROM users WHERE email = ?', [email]);
+      if (existingUser.length > 0) {
+        return res.status(409).json({ error: 'Un utilisateur avec cet email existe déjà.' });
+      }
+
+      // Générer un mot de passe temporaire sécurisé
+      const temporaryPassword = crypto.randomBytes(8).toString('hex');
+      const hashedPassword = await bcrypt.hash(temporaryPassword, 12);
+
+      // Créer l'utilisateur avec le rôle CLIENT
+      const [result] = await db.execute(
+        `INSERT INTO users (email, first_name, last_name, password_hash, phone, user_type, company_name, role, is_active, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+        [email, firstName, lastName, hashedPassword, phone, userType, companyName, ROLES.CLIENT, true]
+      );
+
+      const newUserId = result.insertId;
+
+      // Envoyer l'email de bienvenue
+      const emailSubject = 'Bienvenue - Vos identifiants de connexion';
+      const emailText = `Bonjour ${firstName},
+
+Bienvenue ! Votre compte a été créé avec succès.
+Votre email de connexion : ${email}
+Votre mot de passe temporaire : ${temporaryPassword}
+
+Veuillez vous connecter et changer votre mot de passe dès que possible.
+Lien de connexion : [Insérer le lien de connexion ici]
+
+Cordialement,
+L'équipe de l'hôtel`; // Consider making this more configurable
+
+      await sendEmail(email, emailSubject, emailText);
+
+      // Retourner les détails du client créé (sans le mot de passe)
+      const [newUser] = await db.execute(
+        `SELECT id, email, first_name, last_name, phone, user_type, company_name, role, is_active, created_at
+         FROM users WHERE id = ?`,
+        [newUserId]
+      );
+
+      res.status(201).json({ message: 'Client créé avec succès.', client: newUser[0] });
+
+    } catch (error) {
+      logger.error('Erreur création client:', error);
+      // Check for specific DB errors like duplicate entry if not caught by the initial check
+      if (error.code === 'ER_DUP_ENTRY') {
+         return res.status(409).json({ error: 'Un utilisateur avec cet email existe déjà (conflit base de données).' });
+      }
+      res.status(500).json({ error: 'Erreur interne du serveur lors de la création du client.' });
+    }
+  }
+);
 
 module.exports = router;
