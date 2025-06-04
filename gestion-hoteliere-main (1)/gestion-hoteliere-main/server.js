@@ -106,6 +106,15 @@ app.use(errorHandler);
 
 // Lancement du serveur
 const PORT = process.env.PORT || 5001;
-app.listen(PORT, () => {
-  logger.info(`🚀 Serveur démarré sur le port ${PORT}`);
-});
+let server = null;
+
+if (process.env.NODE_ENV !== 'test') {
+  server = app.listen(PORT, () => {
+    logger.info(`🚀 Serveur démarré sur le port ${PORT}`);
+  });
+}
+// For testing, chai-http will manage starting and stopping the server using the 'app'.
+// So, we don't .listen() when NODE_ENV is 'test'.
+
+// Export the app (for chai-http) and the server instance (if created)
+module.exports = { app, server };
