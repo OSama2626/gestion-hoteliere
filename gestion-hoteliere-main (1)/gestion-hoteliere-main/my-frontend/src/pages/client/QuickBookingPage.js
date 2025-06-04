@@ -165,7 +165,7 @@ const QuickBookingPage = () => {
             { label: 'Book a Room', path: '/client/book-room' },
           ]}
         />
-        <Card sx={{ width: '100%', maxWidth: 520, borderRadius: 3, boxShadow: 3 }}>
+        <Card sx={{ width: '100%', maxWidth: 800, borderRadius: 4, boxShadow: 4, p: { xs: 2, md: 4 } }}>
           <CardContent>
             <Typography variant="h5" fontWeight={600} mb={2} align="center">Quick Booking</Typography>
             <Typography variant="body1" mb={3} color="text.secondary" align="center">
