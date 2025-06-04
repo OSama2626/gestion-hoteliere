@@ -17,20 +17,11 @@ router.get('/my-reservations', authenticateToken, async (req, res) => {
   try {
     // Replace this query with your actual reservation table/fields as needed
     const [reservations] = await db.execute(
-      `SELECT
-  r.*,
-  h.name AS hotel_name,
-  u.email AS user_email  -- Added this line to select the email
-FROM
-  reservations r
-JOIN
-  hotels h ON r.hotel_id = h.id
-LEFT JOIN               -- Added this JOIN with the users table
-  users u ON r.user_id = u.id
-WHERE
-  r.user_id = ?
-ORDER BY
-  r.check_in_date DESC`,
+      `SELECT r.*, h.name AS hotel_name 
+       FROM reservations r
+       JOIN hotels h ON r.hotel_id = h.id
+       WHERE r.user_id = ?
+       ORDER BY r.check_in_date DESC`,
       [req.user.id]
     );
 
@@ -234,10 +225,6 @@ router.patch('/:id/cancel', authenticateToken, async (req, res) => {
 
     if (reservation.status !== 'confirmed') {
       return res.status(400).json({ error: 'Annulation non autorisée' });
-    }
-
-    if (moment().isAfter(moment(reservation.check_in_date).subtract(2, 'days'))) {
-      return res.status(400).json({ error: 'Annulation trop tardive' });
     }
 
     await connection.execute(

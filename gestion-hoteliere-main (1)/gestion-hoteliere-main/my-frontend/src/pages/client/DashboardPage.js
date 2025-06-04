@@ -180,17 +180,6 @@ const DashboardPage = () => {
             { label: 'Home', path: '/' },
             { label: 'Dashboard', path: '/client/dashboard' },
           ]}
-          actions={
-            <Button
-              component={RouterLink}
-              to="/client/book-room"
-              variant="contained"
-              color="primary"
-              startIcon={<HotelIcon />}
-            >
-              Book New Room
-            </Button>
-          }
         />
 
         {/* Welcome Section */}

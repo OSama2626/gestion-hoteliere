@@ -1,21 +1,39 @@
 import React, { useState } from 'react';
-import { useNavigate, Navigate } from 'react-router-dom';
+import { Link as RouterLink, useNavigate, Navigate } from 'react-router-dom';
+import {
+  TextField,
+  Button,
+  Typography,
+  Link,
+  Box,
+  InputAdornment,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Select,
+  useTheme,
+} from '@mui/material';
+import PersonIcon from '@mui/icons-material/Person';
+import BusinessIcon from '@mui/icons-material/Business';
+import EmailIcon from '@mui/icons-material/Email';
+import LockIcon from '@mui/icons-material/Lock';
+import PhoneIcon from '@mui/icons-material/Phone';
 import { useAuth } from '../../store/contexts/AuthContext';
 import { signup as signupService } from '../../services/authService';
-import Input from '../../components/common/forms/Input'; // Assuming this path is correct
-import Button from '../../components/common/forms/Button'; // Assuming this path is correct
+import FormContainer from '../../components/common/FormContainer';
 
 const SignupPage = () => {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [phone, setPhone] = useState('');
-  const [userType, setUserType] = useState('individual'); // Default to 'individual'
+  const [userType, setUserType] = useState('individual');
   const [companyName, setCompanyName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const { signup: authSignup, user: authUser } = useAuth();
   const navigate = useNavigate();
+  const theme = useTheme();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -31,103 +49,170 @@ const SignupPage = () => {
     if (userType === 'company') {
       signupData.companyName = companyName;
     }
-    console.log(`Signup attempt with data:`, signupData);
     try {
-      // Adapt the call to signupService to pass an object.
-      // The actual modification of signupService to accept this object will be a separate step.
       const data = await signupService(signupData);
-      // Optionally, you could add user info here if your backend returns it
-      // For now, just redirect after success
-      console.log(`Signup successful, userId from service:`, data.userId);
       navigate('/client/dashboard', { replace: true });
     } catch (err) {
       setError(err.message || 'Failed to signup');
-      console.error("Signup error:", err);
     }
   };
 
-  // If user is already logged in, redirect them from Signup page
   if (authUser) {
     const defaultPath = authUser.role === 'admin' ? '/admin/dashboard' :
                         authUser.role === 'reception' ? '/reception/dashboard' :
                         '/client/dashboard';
-    console.log(`User already logged in (${authUser.email}), redirecting from Signup page to ${defaultPath}`);
     return <Navigate to={defaultPath} replace />;
   }
 
   return (
-    <div>
-      <h1>Signup Page</h1>
+    <FormContainer>
+      <Typography variant="h4" component="h1" gutterBottom align="center">
+        Create Account
+      </Typography>
+      <Typography variant="body1" color="text.secondary" align="center" sx={{ mb: 4 }}>
+        Sign up to get started with your hotel experience
+      </Typography>
       <form onSubmit={handleSubmit}>
-        <Input
-          label="First Name"
-          type="text"
-          id="firstName"
-          value={firstName}
-          onChange={(e) => setFirstName(e.target.value)}
-          required
-        />
-        <Input
-          label="Last Name"
-          type="text"
-          id="lastName"
-          value={lastName}
-          onChange={(e) => setLastName(e.target.value)}
-          required
-        />
-        <Input
+        <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+          <TextField
+            label="First Name"
+            type="text"
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
+            required
+            fullWidth
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <PersonIcon />
+                </InputAdornment>
+              ),
+            }}
+          />
+          <TextField
+            label="Last Name"
+            type="text"
+            value={lastName}
+            onChange={(e) => setLastName(e.target.value)}
+            required
+            fullWidth
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <PersonIcon />
+                </InputAdornment>
+              ),
+            }}
+          />
+        </Box>
+        <TextField
           label="Phone"
           type="tel"
-          id="phone"
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
           required
+          fullWidth
+          sx={{ mb: 2 }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <PhoneIcon />
+              </InputAdornment>
+            ),
+          }}
         />
-        <div>
-          <label htmlFor="userType">User Type:</label>
-          <select
+        <FormControl fullWidth sx={{ mb: 2 }}>
+          <InputLabel id="userType-label">User Type</InputLabel>
+          <Select
+            labelId="userType-label"
             id="userType"
             value={userType}
+            label="User Type"
             onChange={(e) => setUserType(e.target.value)}
             required
           >
-            <option value="individual">Individual</option>
-            <option value="company">Company</option>
-          </select>
-        </div>
+            <MenuItem value="individual">
+              <PersonIcon sx={{ mr: 1 }} /> Individual
+            </MenuItem>
+            <MenuItem value="company">
+              <BusinessIcon sx={{ mr: 1 }} /> Company
+            </MenuItem>
+          </Select>
+        </FormControl>
         {userType === 'company' && (
-          <Input
+          <TextField
             label="Company Name"
             type="text"
-            id="companyName"
             value={companyName}
             onChange={(e) => setCompanyName(e.target.value)}
             required
+            fullWidth
+            sx={{ mb: 2 }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <BusinessIcon />
+                </InputAdornment>
+              ),
+            }}
           />
         )}
-        <Input
+        <TextField
           label="Email"
           type="email"
-          id="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
+          fullWidth
+          sx={{ mb: 2 }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <EmailIcon />
+              </InputAdornment>
+            ),
+          }}
         />
-        <Input
+        <TextField
           label="Password"
           type="password"
-          id="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
+          fullWidth
+          sx={{ mb: 2 }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <LockIcon />
+              </InputAdornment>
+            ),
+          }}
         />
-        {/*
-        <Input label="Confirm Password" type="password" id="confirmPassword" ... />
-        */}
-        {error && <p style={{ color: 'red' }}>{error}</p>}
-        <Button type="submit">Signup</Button>
+        {error && (
+          <Typography color="error" sx={{ mb: 2, textAlign: 'center' }}>
+            {error}
+          </Typography>
+        )}
+        <Button
+          type="submit"
+          fullWidth
+          variant="contained"
+          size="large"
+          sx={{ mb: 2, py: 1.5, fontWeight: 600, fontSize: '1.1rem' }}
+        >
+          Sign Up
+        </Button>
+        <Box sx={{ textAlign: 'center' }}>
+          <Typography variant="body2" color="text.secondary">
+            Already have an account?{' '}
+            <Link component={RouterLink} to="/login" color="primary">
+              Sign in
+            </Link>
+          </Typography>
+        </Box>
       </form>
-    </div>
+    </FormContainer>
   );
 };
 export default SignupPage;

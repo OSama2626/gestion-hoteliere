@@ -7,6 +7,7 @@ import LoginPage from '../pages/public/LoginPage';
 import SignupPage from '../pages/public/SignupPage';
 import HotelListPage from '../pages/public/HotelListPage'; // Actual component
 import HotelDetailPage from '../pages/public/HotelDetailPage'; // Actual component
+import QuickBookingPage from '../pages/client/QuickBookingPage';
 
 import ClientDashboardPage from '../pages/client/ClientDashboardPage';
 import ReservationsPage from '../pages/client/ReservationsPage';
@@ -48,6 +49,7 @@ const AppRoutes = () => {
       <Route path="/hotels/:id" element={<HotelDetailPage />} />
 
       {/* Client Routes */}
+      <Route path="/client/book-room" element={<ProtectedRoute role="client"><QuickBookingPage /></ProtectedRoute>} />
       <Route path="/client/dashboard" element={<ProtectedRoute role="client"><ClientDashboardPage /></ProtectedRoute>} />
       <Route path="/client/reservations" element={<ProtectedRoute role="client"><ReservationsPage /></ProtectedRoute>} />
       <Route path="/client/profile" element={<ProtectedRoute role="client"><ProfilePage /></ProtectedRoute>} />

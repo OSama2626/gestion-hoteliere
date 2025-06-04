@@ -1,146 +1,167 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../store/contexts/AuthContext';
 import { getReservationsForUser, cancelReservation } from '../../services/reservationService';
-import { Link } from 'react-router-dom';
+import { Link as RouterLink } from 'react-router-dom';
+import {
+  Box,
+  Typography,
+  Card,
+  CardContent,
+  Button,
+  Grid,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  IconButton,
+  Snackbar,
+  Alert,
+} from '@mui/material';
+import BookIcon from '@mui/icons-material/Book';
+import CancelIcon from '@mui/icons-material/Cancel';
+import Sidebar from './Sidebar'; // If you have a Sidebar component, else use Drawer code from dashboard
 
 const ReservationsPage = () => {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   const [reservations, setReservations] = useState([]);
-  const [loading, setLoading] = useState(true); // For reservations data fetching
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [message, setMessage] = useState(''); // For success/info messages
+  const [message, setMessage] = useState('');
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
 
   const fetchUserReservations = useCallback(async () => {
-    // Log user.id and current reservations state at the beginning of the function
-    console.log('fetchUserReservations: user.id:', user?.id, 'current reservations:', reservations);
-    if (isAuthenticated && user && user.id) { // Ensure user and user.id are available
-      console.log(`ReservationsPage: Fetching reservations for user ID: ${user.id}`);
+    if (isAuthenticated && user && user.id) {
       setLoading(true);
       setError('');
       setMessage('');
       try {
-        const data = await getReservationsForUser(); // Removed user.id argument
-        // Log fetched data and state before setReservations
-        console.log('fetchUserReservations: data received:', data, 'state before setReservations:', reservations);
+        const data = await getReservationsForUser();
         setReservations(data);
-        console.log('ReservationsPage: Reservations data received:', data);
       } catch (err) {
-        // Log error
-        console.error('fetchUserReservations: error:', err);
         setError(err.message || 'Failed to fetch reservations.');
-        console.error('ReservationsPage: Error fetching reservations:', err);
       }
       setLoading(false);
     } else {
-      if (!authLoading) { // Only clear if not in initial auth loading phase
-        console.log('ReservationsPage: User not authenticated or user ID missing, clearing reservations.');
+      if (!authLoading) {
         setReservations([]);
         setLoading(false);
       }
     }
-  }, [isAuthenticated, user, authLoading]); // Added authLoading to dependencies
+  }, [isAuthenticated, user, authLoading]);
 
   useEffect(() => {
-    // Fetch reservations when component mounts or when user/auth state changes
-    if (!authLoading) { // Don't fetch if auth is still loading
-        fetchUserReservations();
+    if (!authLoading) {
+      fetchUserReservations();
     }
-  }, [fetchUserReservations, authLoading]); // authLoading ensures we wait for auth check
+  }, [fetchUserReservations, authLoading]);
 
   const handleCancelReservation = async (reservationId) => {
     if (!user || !user.id) {
-        setError("User information is missing, cannot cancel.");
-        return;
+      setError('User information is missing, cannot cancel.');
+      return;
     }
-    setMessage(''); // Clear previous messages
-    setError('');   // Clear previous errors
-
-    const confirmCancel = window.confirm("Are you sure you want to cancel this reservation?");
+    setMessage('');
+    setError('');
+    const confirmCancel = window.confirm('Are you sure you want to cancel this reservation?');
     if (confirmCancel) {
-      // Log current reservations state before calling cancelReservation
-      console.log('handleCancelReservation: before cancelReservation, reservations:', reservations);
-      console.log(`ReservationsPage: Attempting to cancel reservation ID: ${reservationId} for user ID: ${user.id}`);
       try {
-        const result = await cancelReservation(reservationId); // Removed user.id argument
-        // Log success message and current reservations state after cancelReservation succeeds
-        console.log('handleCancelReservation: cancelReservation succeeded, result:', result, 'reservations before fetch:', reservations);
+        const result = await cancelReservation(reservationId);
         setMessage(result.message);
-        console.log('ReservationsPage: Cancellation successful:', result);
-        // Refresh reservations list
+        setSnackbarOpen(true);
         fetchUserReservations();
       } catch (err) {
-        // Log error and reservations state
-        console.error('handleCancelReservation: error cancelling reservation:', err, 'reservations state:', reservations);
         setError(err.message || 'Failed to cancel reservation.');
-        console.error('ReservationsPage: Error cancelling reservation:', err);
+        setSnackbarOpen(true);
       }
     }
   };
 
   if (authLoading) {
-    return <p>Loading user information...</p>;
+    return <Typography>Loading user information...</Typography>;
   }
 
   if (!isAuthenticated) {
     return (
-      <div>
-        <h1>My Reservations</h1>
-        <p>Please <Link to="/login">login</Link> to view your reservations.</p>
-      </div>
+      <Box sx={{ p: 4 }}>
+        <Typography variant="h4" gutterBottom>My Reservations</Typography>
+        <Typography>Please <Button component={RouterLink} to="/login" color="primary">login</Button> to view your reservations.</Typography>
+      </Box>
     );
   }
 
-  if (loading) return <p>Loading your reservations...</p>;
-
-  // Derive activeReservations before the return statement
-  const activeReservations = reservations.filter(
-    res => res.status !== 'cancelled_by_client' && res.status !== 'completed'
-  );
-
   return (
-    <div>
-      <h1>My Reservations</h1>
-      {error && <p style={{ color: 'red', fontWeight: 'bold' }}>Error: {error}</p>}
-      {message && <p style={{ color: 'green', fontWeight: 'bold' }}>{message}</p>}
-
-      {/* Log reservations, loading, and error state before conditional rendering */}
-      {console.log('Render JSX: reservations:', reservations, 'loading:', loading, 'error:', error, 'activeReservations:', activeReservations)}
-      {activeReservations.length === 0 && !error ? ( // Check !error to avoid showing "no reservations" if there was a fetch error
-        <p>You have no active reservations. Why not <Link to="/hotels">book a stay</Link>?</p>
-      ) : (
-        <ul style={{ listStyleType: 'none', padding: 0 }}>
-          {reservations.map(res => (
-            <li key={res.id} style={{ border: '1px solid #eee', borderRadius: '5px', marginBottom: '15px', padding: '15px', boxShadow: '2px 2px 5px #ccc' }}>
-              <h3>Reservation ID: {res.id}</h3>
-              <p><strong>Reference Number:</strong> {res.reference_number || 'N/A'}</p>
-              <p><strong>Hotel:</strong> {res.hotel_name || 'N/A'}</p>
-              <p><strong>Room Type:</strong> {res.room_type_name || res.roomType || 'N/A'}</p>
-              <p><strong>Number of Rooms:</strong> {res.number_of_rooms || res.numRooms || 'N/A'}</p>
-              <p><strong>Check-in:</strong> {res.check_in_date ? new Date(res.check_in_date).toLocaleDateString() : 'Invalid Date'}</p>
-              <p><strong>Check-out:</strong> {res.check_out_date ? new Date(res.check_out_date).toLocaleDateString() : 'Invalid Date'}</p>
-              {(() => {
-                const amount = parseFloat(res.total_amount);
-                return <p><strong>Total Amount:</strong> ${!isNaN(amount) ? amount.toFixed(2) : 'N/A'}</p>;
-              })()}
-              <p><strong>Payment Status:</strong> {res.payment_status ? res.payment_status.replace(/_/g, ' ') : 'N/A'}</p>
-              <p><strong>Status:</strong> <span style={{ fontWeight: 'bold', color: res.status === 'cancelled_by_client' ? 'red' : (res.status === 'confirmed' ? 'green' : 'orange')}}>{(res.status || 'Unknown').replace(/_/g, ' ')}</span></p>
-              {res.special_requests && <p><strong>Special Requests:</strong> {res.special_requests}</p>}
-              {res.bookingSource && <p><strong>Booking Source:</strong> {res.bookingSource}</p>}
-              <p><em>Booked on: {res.created_at ? new Date(res.created_at).toLocaleString() : 'Invalid Date'} by {res.user_name || res.userEmail || 'User N/A'}</em></p>
-
-              {['pending_admin_validation', 'confirmed'].includes(res.status) && (
-                <button
-                  onClick={() => handleCancelReservation(res.id)}
-                  style={{ backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '8px 12px', cursor: 'pointer', borderRadius: '4px' }}
-                >
-                  Cancel Reservation
-                </button>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+    <Box sx={{ display: 'flex', minHeight: '80vh' }}>
+      {/* Sidebar (reuse dashboard sidebar or Drawer) */}
+      {/* If you have a Sidebar component, use it here. Otherwise, copy Drawer code from DashboardPage.js */}
+      <Sidebar selected="My Reservations" />
+      <Box sx={{ flexGrow: 1, p: { xs: 2, md: 4 } }}>
+        <Typography variant="h4" gutterBottom>My Reservations</Typography>
+        <Card sx={{ mb: 4 }}>
+          <CardContent>
+            {loading ? (
+              <Typography>Loading your reservations...</Typography>
+            ) : (
+              <TableContainer component={Paper}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Reference</TableCell>
+                      <TableCell>Hotel</TableCell>
+                      <TableCell>Room Type</TableCell>
+                      <TableCell>Check-in</TableCell>
+                      <TableCell>Check-out</TableCell>
+                      <TableCell>Status</TableCell>
+                      <TableCell align="right">Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {reservations.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} align="center">
+                          You have no active reservations. <Button component={RouterLink} to="/hotels" color="primary">Book a stay</Button>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      reservations.map(res => (
+                        <TableRow key={res.id}>
+                          <TableCell>{res.reference_number || 'N/A'}</TableCell>
+                          <TableCell>{res.hotel_name || 'N/A'}</TableCell>
+                          <TableCell>{res.room_type_name || res.roomType || 'N/A'}</TableCell>
+                          <TableCell>{res.check_in_date ? new Date(res.check_in_date).toLocaleDateString() : 'Invalid Date'}</TableCell>
+                          <TableCell>{res.check_out_date ? new Date(res.check_out_date).toLocaleDateString() : 'Invalid Date'}</TableCell>
+                          <TableCell>
+                            <Typography sx={{ fontWeight: 'bold', color: res.status === 'cancelled_by_client' ? 'red' : (res.status === 'confirmed' ? 'green' : 'orange')}}>
+                              {(res.status || 'Unknown').replace(/_/g, ' ')}
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="right">
+                            {['pending_admin_validation', 'confirmed'].includes(res.status) && (
+                              <IconButton color="error" onClick={() => handleCancelReservation(res.id)} title="Cancel Reservation">
+                                <CancelIcon />
+                              </IconButton>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+          </CardContent>
+        </Card>
+        <Snackbar open={snackbarOpen} autoHideDuration={4000} onClose={() => setSnackbarOpen(false)}>
+          {error ? (
+            <Alert severity="error" onClose={() => setSnackbarOpen(false)}>{error}</Alert>
+          ) : (
+            <Alert severity="success" onClose={() => setSnackbarOpen(false)}>{message}</Alert>
+          )}
+        </Snackbar>
+      </Box>
+    </Box>
   );
 };
 

@@ -84,6 +84,12 @@ const HotelDetailPage = () => {
         return;
     }
 
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Normalize to start of day for comparison
+    if (new Date(startDate) < today) {
+        setReservationError('Start date cannot be in the past.');
+        return;
+    }
 
     setIsSubmitting(true);
 
@@ -121,14 +127,14 @@ const HotelDetailPage = () => {
 
       // Optionally, navigate to reservations page
       // navigate('/client/reservations');
-      alert(`Reservation created successfully! Your reference number is ${result.referenceNumber}. Total amount: ${result.totalAmount}`);
+      // alert(`Reservation created successfully! Your reference number is ${result.referenceNumber}. Total amount: ${result.totalAmount}`); // Removed alert
 
     } catch (err) {
       // err.data might contain more specific error details from the backend
       const backendErrorMessage = err.data?.message || err.data?.error;
       setReservationError(backendErrorMessage || err.message || 'Failed to submit reservation.');
       console.error('HotelDetailPage: Error submitting reservation:', err.data || err);
-      alert(`Error creating reservation: ${backendErrorMessage || err.message}`);
+      // alert(`Error creating reservation: ${backendErrorMessage || err.message}`); // Removed alert
     }
     setIsSubmitting(false);
   };
@@ -240,7 +246,7 @@ const HotelDetailPage = () => {
         {reservationError && <p style={{ color: 'red', marginTop: '10px' }}>{reservationError}</p>}
 
         <button type="submit" style={{ marginTop: '15px' }} disabled={isSubmitting || !isAuthenticated}>
-          {isSubmitting ? 'Submitting...' : 'Request Reservation'}
+          {isSubmitting ? 'Submitting...' : (isAuthenticated ? 'Request Reservation' : 'Login to Book')}
         </button>
       </form>
       <br />

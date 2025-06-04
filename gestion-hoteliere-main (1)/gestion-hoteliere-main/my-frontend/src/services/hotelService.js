@@ -16,7 +16,7 @@ const mockHotels = [
       { roomTypeId: 2, type: 'Double', price: { standard: 180, peak: 250 }, available: 500 },
       { roomTypeId: 4, type: 'Suite', price: { standard: 300, peak: 450 }, available: 200 }
     ],
-    images: ['/placeholder-hotel-1.jpg', '/placeholder-hotel-2.jpg']
+    images: ['/placeholder-hotel-1.jpg']
   },
   { // Hotel 2
     id: '2',
@@ -40,7 +40,7 @@ const mockHotels = [
       { roomTypeId: 2, type: 'Double', price: { standard: 200, peak: 280 }, available: 110 },
       { roomTypeId: 4, type: 'Suite', price: { standard: 350, peak: 500 }, available: 115 }
     ],
-    images: []
+    images: ['/placeholder-hotel-2.jpg']
   }
   // ... and so on for any other hotels
 ];

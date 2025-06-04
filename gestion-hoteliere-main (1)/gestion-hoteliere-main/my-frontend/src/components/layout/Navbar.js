@@ -54,6 +54,7 @@ const Navbar = () => {
           </>
         )}
         <li><Link to="/hotels">Hotels</Link></li>
+        <li><Link to="/book-room">Book a Room</Link></li>
 
         {/* For broad testing, keeping these visible. Refine if they should be role-specific */}
         {!isAuthenticated && ( // Only show these if not logged in, or adjust based on roles

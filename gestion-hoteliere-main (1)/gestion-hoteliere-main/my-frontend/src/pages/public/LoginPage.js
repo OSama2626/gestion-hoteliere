@@ -1,80 +1,133 @@
 import React, { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { Link as RouterLink } from 'react-router-dom';
+import {
+  TextField,
+  Button,
+  Typography,
+  Link,
+  Box,
+  InputAdornment,
+  IconButton,
+} from '@mui/material';
+import { Visibility, VisibilityOff } from '@mui/icons-material';
+import FormContainer from '../../components/common/FormContainer';
 import { useAuth } from '../../store/contexts/AuthContext';
 import { login as loginService } from '../../services/authService';
-import Input from '../../components/common/forms/Input'; // Assuming this path is correct
-import Button from '../../components/common/forms/Button'; // Assuming this path is correct
+import { useNavigate } from 'react-router-dom';
 
 const LoginPage = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+  });
   const [error, setError] = useState('');
-  const { login: authLogin, user: authUser } = useAuth(); // Get user from auth to check role
+
+  const { login: authLogin } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
+
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     try {
-      const { token, user } = await loginService(email, password);
-      authLogin(user, token); // Update AuthContext
-
-      // Redirect based on user role or to intended page
-      const from = location.state?.from?.pathname || getDefaultPathForRole(user.role);
-      console.log(`Login successful, navigating to: ${from} (user role: ${user.role})`);
-      navigate(from, { replace: true });
-
+      const data = await loginService(formData.email, formData.password);
+      // data should contain { token, user }
+      authLogin(data.user, data.token);
+      navigate('/client/dashboard', { replace: true });
     } catch (err) {
-      setError(err.message || 'Failed to login');
-      console.error("Login error:", err);
+      setError('Invalid email or password');
     }
   };
-
-  const getDefaultPathForRole = (role) => {
-    switch (role) {
-      case 'admin':
-        return '/admin/dashboard';
-      case 'reception':
-        return '/reception/dashboard';
-      case 'client':
-      default:
-        return '/client/dashboard';
-    }
-  };
-
-  // If user is already logged in, redirect them
-  if (authUser) {
-    const defaultPath = getDefaultPathForRole(authUser.role);
-    console.log(`User already logged in, redirecting from Login page to ${defaultPath}`);
-    return <Navigate to={defaultPath} replace />;
-   }
-
 
   return (
-    <div>
-      <h1>Login Page</h1>
+    <FormContainer>
+      <Typography variant="h4" component="h1" gutterBottom align="center">
+        Welcome Back
+      </Typography>
+      <Typography variant="body1" color="text.secondary" align="center" sx={{ mb: 4 }}>
+        Sign in to your account to continue
+      </Typography>
+
       <form onSubmit={handleSubmit}>
-        <Input
-          label="Email"
+        <TextField
+          fullWidth
+          label="Email Address"
+          name="email"
           type="email"
-          id="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          value={formData.email}
+          onChange={handleChange}
+          margin="normal"
           required
+          autoFocus
         />
-        <Input
+        <TextField
+          fullWidth
           label="Password"
-          type="password"
-          id="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          name="password"
+          type={showPassword ? 'text' : 'password'}
+          value={formData.password}
+          onChange={handleChange}
+          margin="normal"
           required
+          InputProps={{
+            endAdornment: (
+              <InputAdornment position="end">
+                <IconButton
+                  onClick={() => setShowPassword(!showPassword)}
+                  edge="end"
+                >
+                  {showPassword ? <VisibilityOff /> : <Visibility />}
+                </IconButton>
+              </InputAdornment>
+            ),
+          }}
         />
-        {error && <p style={{ color: 'red' }}>{error}</p>}
-        <Button type="submit">Login</Button>
+
+        <Box sx={{ mt: 2, mb: 3, textAlign: 'right' }}>
+          <Link
+            component={RouterLink}
+            to="/forgot-password"
+            variant="body2"
+            color="primary"
+          >
+            Forgot password?
+          </Link>
+        </Box>
+
+        {error && (
+          <Typography color="error" sx={{ mb: 2, textAlign: 'center' }}>
+            {error}
+          </Typography>
+        )}
+
+        <Button
+          type="submit"
+          fullWidth
+          variant="contained"
+          size="large"
+          sx={{ mb: 2 }}
+        >
+          Sign In
+        </Button>
+
+        <Box sx={{ textAlign: 'center' }}>
+          <Typography variant="body2" color="text.secondary">
+            Don't have an account?{' '}
+            <Link component={RouterLink} to="/signup" color="primary">
+              Sign up
+            </Link>
+          </Typography>
+        </Box>
       </form>
-    </div>
+    </FormContainer>
   );
 };
+
 export default LoginPage;
