@@ -1,7 +1,16 @@
-import React, { createContext, useState, useContext, useEffect, useCallback } from 'react'; // Added useCallback
-import { getToken as getStoredToken, getCurrentUser as getStoredUser, logout as authServiceLogout } from '../../services/authService';
-import { getNotificationsForUser as fetchUserNotifications } from '../../services/notificationService'; // Alias import
-import { getCurrentUser } from '../../services/authService';
+import React, {
+  createContext,
+  useState,
+  useContext,
+  useEffect,
+  useCallback,
+} from 'react';
+import {
+  getToken as getStoredToken,
+  getCurrentUser as getStoredUser,
+  logout as authServiceLogout,
+} from '../../services/authService';
+import { getNotificationsForUser as fetchUserNotifications } from '../../services/notificationService';
 
 const AuthContext = createContext(null);
 
@@ -9,49 +18,57 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0); // New state
+  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
 
   const refreshNotificationsCount = useCallback(async (currentUserId) => {
     if (currentUserId) {
-      console.log("AuthContext: Attempting to refresh notifications count for user:", currentUserId);
       try {
         const notifications = await fetchUserNotifications(currentUserId);
-        const unreadCount = notifications.filter(n => !n.read).length;
+        const unreadCount = notifications.filter((n) => !n.read).length;
         setUnreadNotificationsCount(unreadCount);
-        console.log("AuthContext: Refreshed unread notifications count:", unreadCount);
       } catch (error) {
-        console.error("AuthContext: Failed to fetch notifications count", error);
+        console.error('Failed to fetch notifications count', error);
       }
     } else {
-      console.log("AuthContext: No currentUserId provided to refreshNotificationsCount, setting count to 0.");
-      setUnreadNotificationsCount(0); // Reset if no user
+      setUnreadNotificationsCount(0);
     }
   }, []);
 
   useEffect(() => {
-    console.log('AuthProvider useEffect: Attempting to load token and user');
     const storedToken = getStoredToken();
     const storedUser = getStoredUser();
     if (storedToken && storedUser) {
-      console.log('AuthProvider useEffect: Found stored token and user', storedUser);
       setToken(storedToken);
       setUser(storedUser);
-      refreshNotificationsCount(storedUser.id); // Fetch count on load
+      refreshNotificationsCount(storedUser.id);
     } else {
-      console.log('AuthProvider useEffect: No stored token or user found');
-      setUnreadNotificationsCount(0); // Ensure count is 0 if no user
+      setUnreadNotificationsCount(0);
     }
     setLoading(false);
-  }, [refreshNotificationsCount]); // Added refreshNotificationsCount
+  }, [refreshNotificationsCount]);
 
-  const login = (userData, userToken) => {
-    console.log('AuthContext login: Storing token and user', userData);
-    localStorage.setItem('authToken', userToken);
-    localStorage.setItem('authUser', JSON.stringify(userData));
-    setUser(userData);
-    setToken(userToken);
-    console.log("AuthContext login, user set to:", userData);
-    refreshNotificationsCount(userData.id); // Refresh count on login
+  const login = (email, password, role) => {
+    // DEMO USERS
+    let demoUser = null;
+    if (role === 'agent' && email === 'agent@hotel.com' && password === 'agent123') {
+      demoUser = { id: 1, email, role: 'agent', name: 'Agent Demo' };
+    } else if (role === 'client' && email === 'client@hotel.com' && password === 'client123') {
+      demoUser = { id: 2, email, role: 'client', name: 'Client Demo' };
+    } else if (role === 'admin' && email === 'admin@hotel.com' && password === 'admin123') {
+      demoUser = { id: 3, email, role: 'admin', name: 'Admin Demo' };
+    }
+
+    if (demoUser) {
+      const demoToken = 'demo-token-' + role;
+      localStorage.setItem('authToken', demoToken);
+      localStorage.setItem('authUser', JSON.stringify(demoUser));
+      setUser(demoUser);
+      setToken(demoToken);
+      refreshNotificationsCount(demoUser.id);
+      return true;
+    }
+
+    return false;
   };
 
   const signup = (userData, userToken) => {
@@ -59,45 +76,42 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('authUser', JSON.stringify(userData));
     setUser(userData);
     setToken(userToken);
-    console.log("AuthContext signup, user set to:", userData);
-    refreshNotificationsCount(userData.id); // Refresh count on signup
+    refreshNotificationsCount(userData.id);
   };
 
   const updateUserInContext = (updatedUserData) => {
-    // Ensure that we are only updating with the fields we expect (id, email, name, role)
-    // This helps prevent accidentally storing sensitive info if the backend ever returned more.
     const sanitizedUserData = {
-        id: updatedUserData.id,
-        email: updatedUserData.email,
-        name: updatedUserData.name,
-        role: updatedUserData.role,
+      id: updatedUserData.id,
+      email: updatedUserData.email,
+      name: updatedUserData.name,
+      role: updatedUserData.role,
     };
     localStorage.setItem('authUser', JSON.stringify(sanitizedUserData));
     setUser(sanitizedUserData);
-    console.log("AuthContext user updated to:", sanitizedUserData);
   };
 
   const logout = () => {
-    console.log('AuthContext logout: Clearing user and token');
-    authServiceLogout(); // from authService, clears localStorage
+    authServiceLogout();
     setUser(null);
     setToken(null);
-    setUnreadNotificationsCount(0); // Reset count on logout
+    setUnreadNotificationsCount(0);
   };
 
   return (
-    <AuthContext.Provider value={{
-      user,
-      token,
-      login,
-      logout,
-      signup,
-      updateUserInContext,
-      isAuthenticated: !!token,
-      loading,
-      unreadNotificationsCount,      // Provide new state
-      refreshNotificationsCount    // Provide new function
-    }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        token,
+        login,
+        logout,
+        signup,
+        updateUserInContext,
+        isAuthenticated: !!token,
+        loading,
+        unreadNotificationsCount,
+        refreshNotificationsCount,
+      }}
+    >
       {!loading && children}
     </AuthContext.Provider>
   );

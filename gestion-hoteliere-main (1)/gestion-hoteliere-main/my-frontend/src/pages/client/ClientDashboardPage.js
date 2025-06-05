@@ -203,40 +203,59 @@ const DashboardPage = () => {
           </Typography>
         </Card>
 
-        {/* Stats Cards */}
-        <Grid container spacing={3} sx={{ mb: 4 }}>
-          {stats.map((stat, index) => (
-            <Grid item xs={12} sm={6} md={3} key={index}>
-              <Card>
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <Box sx={{ color: stat.color, mr: 2 }}>{stat.icon}</Box>
-                    <Typography variant="h6" component="div">
-                      {stat.title}
-                    </Typography>
-                  </Box>
-                  <Typography variant="h4" component="div">
-                    {stat.value}
-                  </Typography>
-                </CardContent>
-              </Card>
+        {user?.email === 'client@hotel.com' ? (
+          <Card sx={{ mb: 4, p: 3, textAlign: 'center' }}>
+            <Typography variant="h6" gutterBottom>
+              Start your journey with us!
+            </Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>
+              Explore our amazing hotels or book your first room to get started.
+            </Typography>
+            <Button component={RouterLink} to="/hotels" variant="outlined" sx={{ mr: 2 }}>
+              Explore Hotels
+            </Button>
+            <Button component={RouterLink} to="/client/book-room" variant="contained">
+              Book a Room
+            </Button>
+          </Card>
+        ) : (
+          <>
+            {/* Stats Cards */}
+            <Grid container spacing={3} sx={{ mb: 4 }}>
+              {stats.map((stat, index) => (
+                <Grid item xs={12} sm={6} md={3} key={index}>
+                  <Card>
+                    <CardContent>
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                        <Box sx={{ color: stat.color, mr: 2 }}>{stat.icon}</Box>
+                        <Typography variant="h6" component="div">
+                          {stat.title}
+                        </Typography>
+                      </Box>
+                      <Typography variant="h4" component="div">
+                        {stat.value}
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
             </Grid>
-          ))}
-        </Grid>
 
-        {/* Recent Bookings Table */}
-        <Typography variant="h5" gutterBottom>
-          Recent Bookings
-        </Typography>
-        <DataTable
-          columns={columns}
-          data={recentBookings}
-          page={page}
-          rowsPerPage={rowsPerPage}
-          totalCount={recentBookings.length}
-          onPageChange={handlePageChange}
-          onRowsPerPageChange={handleRowsPerPageChange}
-        />
+            {/* Recent Bookings Table */}
+            <Typography variant="h5" gutterBottom>
+              Recent Bookings
+            </Typography>
+            <DataTable
+              columns={columns}
+              data={recentBookings}
+              page={page}
+              rowsPerPage={rowsPerPage}
+              totalCount={recentBookings.length}
+              onPageChange={handlePageChange}
+              onRowsPerPageChange={handleRowsPerPageChange}
+            />
+          </>
+        )}
       </Box>
     </Box>
   );
